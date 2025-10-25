@@ -1,0 +1,7 @@
+# Netlify redirects for SPA routing
+/*    /index.html   200
+
+# Handle legal pages
+/privacy-policy    /index.html   200
+/terms-of-service  /index.html   200
+/reset-password    /index.html   200

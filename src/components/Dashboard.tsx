@@ -1,0 +1,218 @@
+import React, { useState, useEffect } from 'react';
+import { Session } from '@supabase/supabase-js';
+import { supabase } from '../lib/supabase';
+import Header from './Header';
+import AdminPanel from './AdminPanel';
+import ArticleView from './ArticleView';
+import NotebookView from './NotebookView';
+import ArchiveView from './ArchiveView';
+import AboutView from './AboutView';
+import NotificationSettings from './NotificationSettings';
+import Tutorial from './Tutorial';
+import { Article, UserNote, UserProfile } from '../types';
+
+interface DashboardProps {
+  session: Session;
+}
+
+export default function Dashboard({ session }: DashboardProps) {
+  const [currentView, setCurrentView] = useState<'article' | 'notebook' | 'archive' | 'about'>('article');
+  const [todayArticle, setTodayArticle] = useState<Article | null>(null);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [showTutorial, setShowTutorial] = useState(false);
+  const [showNotificationSettings, setShowNotificationSettings] = useState(false);
+  const [showAdminPanel, setShowAdminPanel] = useState(false);
+
+  useEffect(() => {
+    loadUserProfile();
+    loadTodayArticle();
+  }, [session]);
+
+  const loadUserProfile = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('user_profiles')
+        .select('*')
+        .eq('id', session.user.id)
+        .maybeSingle();
+
+      if (error && error.code !== 'PGRST116') throw error;
+
+      if (data) {
+        setUserProfile(data);
+      } else {
+        // Create profile if it doesn't exist
+        try {
+          const { data: newProfile, error: createError } = await supabase
+            .from('user_profiles')
+            .insert({
+              id: session.user.id,
+              email: session.user.email,
+              streak: 0,
+              total_notes: 0,
+            })
+            .select()
+            .single();
+
+          if (createError) throw createError;
+          setUserProfile(newProfile);
+          // Show tutorial for new users
+          setShowTutorial(true);
+        } catch (createError: any) {
+          // If profile creation fails due to duplicate key (concurrent creation)
+          if (createError.code === '23505') {
+            // Retry fetching the existing profile
+            const { data: existingProfile, error: retryError } = await supabase
+              .from('user_profiles')
+              .select('*')
+              .eq('id', session.user.id)
+              .single();
+
+            if (retryError) throw retryError;
+            setUserProfile(existingProfile);
+            // Check if user needs tutorial (new user with no notes)
+            if (existingProfile.total_notes === 0) {
+              setShowTutorial(true);
+            }
+          } else {
+            throw createError;
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error loading user profile:', error);
+    }
+  };
+
+  const loadTodayArticle = async () => {
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      
+      const { data, error } = await supabase
+        .from('articles')
+        .select('*')
+        .eq('published_date', today)
+        .eq('is_published', true)
+        .maybeSingle();
+
+      if (error && error.code !== 'PGRST116') throw error;
+      
+      setTodayArticle(data);
+      setLoading(false);
+    } catch (error) {
+      console.error('Error loading today\'s article:', error);
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    // Set up notification scheduling when component mounts
+    const settings = localStorage.getItem('climateNoteSettings');
+    if (settings) {
+      const { browserNotifications, reminderTime } = JSON.parse(settings);
+      if (browserNotifications && typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+        scheduleNotifications(reminderTime);
+      }
+    }
+  }, []);
+
+  const scheduleNotifications = (reminderTime: string) => {
+    const [hours, minutes] = reminderTime.split(':').map(Number);
+    const now = new Date();
+    const scheduledTime = new Date();
+    scheduledTime.setHours(hours, minutes, 0, 0);
+
+    // If the time has passed today, schedule for tomorrow
+    if (scheduledTime <= now) {
+      scheduledTime.setDate(scheduledTime.getDate() + 1);
+    }
+
+    const timeUntilNotification = scheduledTime.getTime() - now.getTime();
+
+    setTimeout(() => {
+      if ('Notification' in window && Notification.permission === 'granted') {
+        new Notification('Time for your Climate Note! 🌱', {
+          body: 'Read today\'s environmental story and write your action note to keep your streak going.',
+          icon: '/favicon.ico',
+          tag: 'climate-note-reminder',
+          requireInteraction: true
+        });
+      }
+      
+      // Schedule the next day's notification
+      scheduleNotifications(reminderTime);
+    }, timeUntilNotification);
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="animate-pulse text-emerald-600">Loading today's story...</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <Header 
+        userProfile={userProfile}
+        currentView={currentView}
+        onViewChange={setCurrentView}
+        onSignOut={() => supabase.auth.signOut()}
+        onNotificationSettings={() => setShowNotificationSettings(true)}
+        onAdminPanel={() => setShowAdminPanel(true)}
+      />
+      
+      <main className="pt-20" id="main-content">
+        {currentView === 'article' && (
+          <div id="article-content">
+            <ArticleView 
+              article={todayArticle} 
+              userProfile={userProfile}
+              onProfileUpdate={setUserProfile}
+            />
+          </div>
+        )}
+        {currentView === 'notebook' && (
+          <div id="notebook-content">
+            <NotebookView userProfile={userProfile} />
+          </div>
+        )}
+        {currentView === 'archive' && (
+          <div id="archive-content">
+            <ArchiveView />
+          </div>
+        )}
+        {currentView === 'about' && (
+          <div id="about-content">
+            <AboutView />
+          </div>
+        )}
+      </main>
+      
+      {/* Tutorial */}
+      {showTutorial && (
+        <Tutorial
+          onComplete={() => setShowTutorial(false)}
+          currentView={currentView}
+          onViewChange={setCurrentView}
+        />
+      )}
+      
+      {/* Notification Settings */}
+      {showNotificationSettings && (
+        <NotificationSettings
+          onClose={() => setShowNotificationSettings(false)}
+        />
+      )}
+      
+      {/* Admin Panel */}
+      {showAdminPanel && (
+        <AdminPanel
+          onClose={() => setShowAdminPanel(false)}
+        />
+      )}
+    </div>
+  );
+}
