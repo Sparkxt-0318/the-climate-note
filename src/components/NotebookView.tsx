@@ -152,9 +152,9 @@ export default function NotebookView({ userProfile }: NotebookViewProps) {
 
   const getCircleColor = (email: string) => {
     const colors = [
-      'bg-red-400', 'bg-blue-400', 'bg-green-400', 'bg-yellow-400', 
-      'bg-purple-400', 'bg-pink-400', 'bg-indigo-400', 'bg-orange-400',
-      'bg-teal-400', 'bg-cyan-400', 'bg-lime-400', 'bg-rose-400'
+      'bg-pink-300', 'bg-rose-300', 'bg-orange-300', 'bg-amber-300',
+      'bg-yellow-300', 'bg-lime-300', 'bg-emerald-300', 'bg-teal-300',
+      'bg-cyan-300', 'bg-sky-300', 'bg-blue-300', 'bg-violet-300'
     ];
     const hash = email.split('').reduce((a, b) => a + b.charCodeAt(0), 0);
     return colors[hash % colors.length];
@@ -219,7 +219,7 @@ export default function NotebookView({ userProfile }: NotebookViewProps) {
         </div>
       </div>
 
-      {/* Retro Notebook */}
+      {/* Cute Notebook */}
       {notes.length === 0 ? (
         <div className="text-center py-12">
           <BookOpen className="w-12 h-12 text-gray-400 mx-auto mb-4" />
@@ -227,7 +227,7 @@ export default function NotebookView({ userProfile }: NotebookViewProps) {
             {filter === 'mine' ? 'No notes yet' : 'No community notes yet'}
           </h3>
           <p className="text-gray-600">
-            {filter === 'mine' 
+            {filter === 'mine'
               ? 'Read today\'s article and write your first action note!'
               : 'Be the first to share your environmental action!'}
           </p>
@@ -235,49 +235,34 @@ export default function NotebookView({ userProfile }: NotebookViewProps) {
       ) : (
         <div className="relative">
           {/* Notebook Background */}
-          <div 
-            className="bg-yellow-50 border-2 border-yellow-200 rounded-lg p-8 min-h-96 relative overflow-hidden"
-            style={{
-              backgroundImage: `
-                linear-gradient(to right, #fef3c7 0px, #fef3c7 40px, transparent 40px),
-                repeating-linear-gradient(
-                  transparent,
-                  transparent 24px,
-                  #fbbf24 24px,
-                  #fbbf24 26px
-                )
-              `,
-              backgroundSize: '100% 100%, 100% 26px'
-            }}
+          <div
+            className="bg-gradient-to-br from-pink-50 via-white to-blue-50 border-4 border-white rounded-3xl p-12 min-h-96 relative overflow-hidden shadow-xl"
           >
-            {/* Red margin line */}
-            <div className="absolute left-12 top-0 bottom-0 w-0.5 bg-red-400"></div>
-            
-            {/* Spiral binding holes */}
-            <div className="absolute left-6 top-0 bottom-0 flex flex-col justify-evenly">
-              {Array.from({ length: 15 }).map((_, i) => (
-                <div key={i} className="w-3 h-3 bg-gray-300 rounded-full border border-gray-400"></div>
-              ))}
+            {/* Decorative corner stickers */}
+            <div className="absolute top-2 left-2 w-8 h-8 bg-yellow-200 rounded-full opacity-40"></div>
+            <div className="absolute top-2 right-2 w-6 h-6 bg-pink-200 rounded-full opacity-40"></div>
+            <div className="absolute bottom-2 left-2 w-6 h-6 bg-blue-200 rounded-full opacity-40"></div>
+            <div className="absolute bottom-2 right-2 w-8 h-8 bg-green-200 rounded-full opacity-40"></div>
+
+            {/* Title with cute styling */}
+            <div className="text-center mb-8">
+              <h2 className="text-2xl font-bold bg-gradient-to-r from-pink-400 via-purple-400 to-blue-400 bg-clip-text text-transparent mb-1">
+                🌸 Climate Actions 🌸
+              </h2>
+              <p className="text-sm text-gray-500">Click on any circle to see what others are doing!</p>
             </div>
 
-            {/* User circles scattered across the notebook */}
-            <div className="relative w-full h-full min-h-80">
-              {notes.map((note, index) => {
-                // Generate pseudo-random positions for circles
-                const x = 60 + (index * 137.5) % (100 - 20); // Golden angle distribution
-                const y = 20 + (index * 89.3) % 60;
-                
+            {/* User circles in grid layout */}
+            <div className="grid grid-cols-8 gap-4 justify-items-center items-center py-8 px-4">
+              {notes.map((note) => {
                 return (
                   <button
                     key={note.id}
                     onClick={(e) => handleCircleClick(note, e)}
-                    className={`absolute w-8 h-8 rounded-full ${getCircleColor(note.user_profiles.email)} 
-                      hover:scale-110 transition-transform duration-200 shadow-md hover:shadow-lg
-                      border-2 border-white flex items-center justify-center text-white font-semibold text-sm`}
-                    style={{
-                      left: `${x}%`,
-                      top: `${y}%`,
-                    }}
+                    className={`w-12 h-12 rounded-full ${getCircleColor(note.user_profiles.email)}
+                      hover:scale-125 transition-all duration-300 shadow-lg hover:shadow-2xl
+                      border-3 border-white flex items-center justify-center text-white font-bold text-base
+                      hover:rotate-12 transform`}
                   >
                     {note.user_profiles.email.charAt(0).toUpperCase()}
                   </button>
@@ -285,9 +270,9 @@ export default function NotebookView({ userProfile }: NotebookViewProps) {
               })}
             </div>
 
-            {/* Notebook title */}
-            <div className="absolute top-4 left-16 text-blue-600 font-handwriting text-lg">
-              Climate Actions
+            {/* Cute footer message */}
+            <div className="text-center mt-6 text-sm text-gray-500">
+              ✨ {notes.length} {notes.length === 1 ? 'person is' : 'people are'} making a difference! ✨
             </div>
           </div>
         </div>
@@ -303,8 +288,8 @@ export default function NotebookView({ userProfile }: NotebookViewProps) {
           ></div>
           
           {/* Popup */}
-          <div 
-            className="fixed z-50 bg-white rounded-lg shadow-2xl p-6 max-w-md w-80 transform -translate-x-1/2 -translate-y-full"
+          <div
+            className="fixed z-50 bg-gradient-to-br from-pink-50 to-blue-50 rounded-2xl shadow-2xl p-6 max-w-md w-80 transform -translate-x-1/2 -translate-y-full border-4 border-white"
             style={{
               left: `${popupNote.position.x}px`,
               top: `${popupNote.position.y - 10}px`,
@@ -313,19 +298,19 @@ export default function NotebookView({ userProfile }: NotebookViewProps) {
             {/* Close button */}
             <button
               onClick={closePopup}
-              className="absolute top-2 right-2 text-gray-400 hover:text-gray-600 transition-colors"
+              className="absolute top-3 right-3 text-gray-400 hover:text-gray-600 transition-colors hover:rotate-90 transform duration-200"
             >
-              <X className="w-4 h-4" />
+              <X className="w-5 h-5" />
             </button>
 
             {/* User info */}
             <div className="flex items-center space-x-3 mb-4">
-              <div className={`w-10 h-10 rounded-full ${getCircleColor(popupNote.note.user_profiles.email)} 
-                flex items-center justify-center text-white font-semibold`}>
+              <div className={`w-12 h-12 rounded-full ${getCircleColor(popupNote.note.user_profiles.email)}
+                flex items-center justify-center text-white font-bold text-lg shadow-md`}>
                 {popupNote.note.user_profiles.email.charAt(0).toUpperCase()}
               </div>
               <div>
-                <p className="font-semibold text-gray-900">
+                <p className="font-bold text-gray-900">
                   {popupNote.note.user_profiles.email.split('@')[0]}
                 </p>
                 <div className="flex items-center space-x-2 text-sm text-gray-500">
@@ -336,32 +321,33 @@ export default function NotebookView({ userProfile }: NotebookViewProps) {
             </div>
 
             {/* Article reference */}
-            <div className="mb-3">
-              <h4 className="text-sm font-medium text-emerald-600 mb-1">
-                Action from: {popupNote.note.articles.title}
+            <div className="mb-3 bg-white/60 rounded-lg p-3">
+              <h4 className="text-xs font-semibold text-emerald-600 mb-1">
+                📰 Action from:
               </h4>
+              <p className="text-sm text-gray-700">{popupNote.note.articles.title}</p>
             </div>
 
             {/* Note content */}
-            <div className="mb-4">
+            <div className="mb-4 bg-white/60 rounded-lg p-3">
               <p className="text-gray-800 leading-relaxed text-sm">
                 {popupNote.note.content}
               </p>
             </div>
 
             {/* Encourage button */}
-            <div className="flex items-center justify-between">
-              <button 
+            <div className="flex items-center justify-center">
+              <button
                 onClick={() => handleEncourage(popupNote.note.id, popupNote.note.user_has_reacted)}
-                className={`flex items-center space-x-1 px-3 py-1 rounded-full text-sm transition-colors ${
-                  popupNote.note.user_has_reacted 
-                    ? 'bg-red-50 text-red-600 hover:bg-red-100' 
-                    : 'bg-gray-50 text-gray-600 hover:bg-emerald-50 hover:text-emerald-600'
+                className={`flex items-center space-x-2 px-5 py-2 rounded-full text-sm font-semibold transition-all transform hover:scale-105 shadow-md ${
+                  popupNote.note.user_has_reacted
+                    ? 'bg-gradient-to-r from-pink-400 to-rose-400 text-white'
+                    : 'bg-white text-gray-700 hover:bg-gradient-to-r hover:from-pink-400 hover:to-rose-400 hover:text-white'
                 }`}
               >
                 <Heart className={`w-4 h-4 ${popupNote.note.user_has_reacted ? 'fill-current' : ''}`} />
                 <span>
-                  {popupNote.note.user_has_reacted ? 'Encouraged' : 'Encourage'}
+                  {popupNote.note.user_has_reacted ? 'Encouraged!' : 'Encourage'}
                   {popupNote.note.reaction_count > 0 && ` (${popupNote.note.reaction_count})`}
                 </span>
               </button>
