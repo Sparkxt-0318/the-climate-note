@@ -2,9 +2,16 @@
 
 Daily climate action, one note at a time. 📝
 
-## About
+## About - Founder's Note
 
-The Climate Note is an environmental newsletter platform that turns reading into action. Users read daily environmental stories and write personal action notes about what they'll do differently, building sustainable habits through gamified streaks and community engagement.
+Hi! I’m Siyeong (John) Park, founder of The Climate Note and an aspiring environmental scientist. As I approached climate change in various perspectives, through scientific research, policies, and running various relevant projects. 
+
+After trying to understand this big issue of climate change in small bites, I realized the importance of **taking action**. Also, I realized that most of our generation is aware of the problems and the actions that we could take to mitigate climate change.
+	
+The Climate Note is different from other newsletters in a way we encourage **you** to take actions for the environment. Through our articles made by the youth, and the ‘climate note’ function, we will help you think more about your actions and remind you of a small habit to fix.
+
+**Together, I am confident that climate change is solvable.**
+
 
 ## Features
 
