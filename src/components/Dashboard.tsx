@@ -88,16 +88,18 @@ export default function Dashboard({ session }: DashboardProps) {
   const loadTodayArticle = async () => {
     try {
       const today = new Date().toISOString().split('T')[0];
-      
+
       const { data, error } = await supabase
         .from('articles')
         .select('*')
         .eq('published_date', today)
         .eq('is_published', true)
+        .order('created_at', { ascending: false })
+        .limit(1)
         .maybeSingle();
 
       if (error && error.code !== 'PGRST116') throw error;
-      
+
       setTodayArticle(data);
       setLoading(false);
     } catch (error) {
