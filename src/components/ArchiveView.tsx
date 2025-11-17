@@ -55,18 +55,18 @@ export default function ArchiveView() {
 
   if (loading) {
     return (
-      <div className="max-w-6xl mx-auto px-6 py-12 text-center">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 sm:py-12 text-center">
         <div className="animate-pulse text-emerald-600">Loading archive...</div>
       </div>
     );
   }
 
   return (
-    <div className="max-w-6xl mx-auto px-6 py-8">
+    <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-4">Article Archive</h1>
-        <p className="text-gray-600 mb-6">
+      <div className="mb-6 sm:mb-8">
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-3 sm:mb-4">Article Archive</h1>
+        <p className="text-sm sm:text-base text-gray-600 mb-4 sm:mb-6">
           Explore our collection of environmental insights and action guides
         </p>
 
@@ -81,14 +81,14 @@ export default function ArchiveView() {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Search articles..."
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+              className="w-full pl-10 pr-4 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
             />
           </div>
-          
+
           <select
             value={selectedCategory}
             onChange={(e) => setSelectedCategory(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+            className="px-4 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
           >
             <option value="all">All Categories</option>
             {categories.map(category => (
@@ -107,14 +107,14 @@ export default function ArchiveView() {
         </div>
       ) : selectedCategory === 'all' ? (
         // Show grouped by category when viewing all
-        <div className="space-y-12">
+        <div className="space-y-8 sm:space-y-12">
           {Object.entries(groupedArticles).map(([category, categoryArticles]) => (
             categoryArticles.length > 0 && (
               <div key={category}>
-                <h2 className="text-2xl font-bold text-gray-900 mb-6 pb-2 border-b border-emerald-100">
+                <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-4 sm:mb-6 pb-2 border-b border-emerald-100">
                   {category}
                 </h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                   {categoryArticles.map((article) => (
                     <ArticleCard key={article.id} article={article} />
                   ))}
@@ -125,7 +125,7 @@ export default function ArchiveView() {
         </div>
       ) : (
         // Show as grid when filtering by specific category
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
           {filteredArticles.map((article) => (
             <ArticleCard key={article.id} article={article} />
           ))}
@@ -138,33 +138,33 @@ export default function ArchiveView() {
 function ArticleCard({ article }: { article: Article }) {
   return (
     <div className="bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-lg transition-all duration-200 cursor-pointer group">
-      <div className="p-6">
-        <div className="flex items-center space-x-2 text-xs text-gray-500 mb-3">
+      <div className="p-4 sm:p-6">
+        <div className="flex items-center space-x-2 text-xs text-gray-500 mb-2 sm:mb-3">
           <Calendar className="w-3 h-3" />
           <span>{new Date(article.published_date).toLocaleDateString()}</span>
           <span>•</span>
           <Clock className="w-3 h-3" />
           <span>{article.reading_time} min</span>
         </div>
-        
+
         {article.category && (
-          <span className="inline-block bg-emerald-100 text-emerald-800 text-xs font-medium px-2 py-1 rounded-full mb-3">
+          <span className="inline-block bg-emerald-100 text-emerald-800 text-xs font-medium px-2 py-1 rounded-full mb-2 sm:mb-3">
             {article.category}
           </span>
         )}
-        
-        <h3 className="font-bold text-gray-900 text-lg leading-tight mb-2 group-hover:text-emerald-700 transition-colors">
+
+        <h3 className="font-bold text-gray-900 text-base sm:text-lg leading-tight mb-2 group-hover:text-emerald-700 transition-colors">
           {article.title}
         </h3>
-        
+
         {article.subtitle && (
           <p className="text-gray-600 text-sm leading-relaxed line-clamp-3">
             {article.subtitle}
           </p>
         )}
       </div>
-      
-      <div className="px-6 pb-4">
+
+      <div className="px-4 sm:px-6 pb-4">
         <button className="text-emerald-600 hover:text-emerald-700 text-sm font-medium transition-colors">
           Read article →
         </button>

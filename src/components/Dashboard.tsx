@@ -172,7 +172,7 @@ export default function Dashboard({ session }: DashboardProps) {
         onArticleReview={() => setShowArticleReview(true)}
       />
       
-      <main className="pt-20" id="main-content">
+      <main className="pt-16 sm:pt-20" id="main-content">
         {currentView === 'article' && (
           <div id="article-content">
             <ArticleView 

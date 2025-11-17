@@ -177,26 +177,26 @@ export default function NotebookView({ userProfile }: NotebookViewProps) {
 
   if (loading) {
     return (
-      <div className="max-w-6xl mx-auto px-6 py-12 text-center">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 sm:py-12 text-center">
         <div className="animate-pulse text-emerald-600">Loading community notebook...</div>
       </div>
     );
   }
 
   return (
-    <div className="max-w-6xl mx-auto px-6 py-8">
+    <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-4">Community Notebook</h1>
-        <p className="text-gray-600 mb-6">
+      <div className="mb-6 sm:mb-8">
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-3 sm:mb-4">Community Notebook</h1>
+        <p className="text-sm sm:text-base text-gray-600 mb-4 sm:mb-6">
           See how others are turning climate awareness into daily action
         </p>
 
         {/* Filter Tabs */}
-        <div className="flex items-center space-x-4">
+        <div className="flex items-center space-x-2 sm:space-x-4">
           <button
             onClick={() => setFilter('all')}
-            className={`flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition-colors ${
+            className={`flex items-center space-x-2 px-3 sm:px-4 py-2 rounded-lg font-medium transition-colors text-sm sm:text-base ${
               filter === 'all'
                 ? 'bg-emerald-100 text-emerald-700'
                 : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
@@ -207,7 +207,7 @@ export default function NotebookView({ userProfile }: NotebookViewProps) {
           </button>
           <button
             onClick={() => setFilter('mine')}
-            className={`flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition-colors ${
+            className={`flex items-center space-x-2 px-3 sm:px-4 py-2 rounded-lg font-medium transition-colors text-sm sm:text-base ${
               filter === 'mine'
                 ? 'bg-emerald-100 text-emerald-700'
                 : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
@@ -245,23 +245,23 @@ export default function NotebookView({ userProfile }: NotebookViewProps) {
             <div className="absolute bottom-2 right-2 w-8 h-8 bg-green-200 rounded-full opacity-40"></div>
 
             {/* Title with cute styling */}
-            <div className="text-center mb-8">
-              <h2 className="text-2xl font-bold bg-gradient-to-r from-pink-400 via-purple-400 to-blue-400 bg-clip-text text-transparent mb-1">
+            <div className="text-center mb-6 sm:mb-8">
+              <h2 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-pink-400 via-purple-400 to-blue-400 bg-clip-text text-transparent mb-1">
                 🌸 Climate Actions 🌸
               </h2>
-              <p className="text-sm text-gray-500">Click on any circle to see what others are doing!</p>
+              <p className="text-xs sm:text-sm text-gray-500">Click on any circle to see what others are doing!</p>
             </div>
 
             {/* User circles in grid layout */}
-            <div className="grid grid-cols-8 gap-4 justify-items-center items-center py-8 px-4">
+            <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-8 gap-3 sm:gap-4 justify-items-center items-center py-6 sm:py-8 px-2 sm:px-4">
               {notes.map((note) => {
                 return (
                   <button
                     key={note.id}
                     onClick={(e) => handleCircleClick(note, e)}
-                    className={`w-12 h-12 rounded-full ${getCircleColor(note.user_profiles.email)}
+                    className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full ${getCircleColor(note.user_profiles.email)}
                       hover:scale-125 transition-all duration-300 shadow-lg hover:shadow-2xl
-                      border-3 border-white flex items-center justify-center text-white font-bold text-base
+                      border-3 border-white flex items-center justify-center text-white font-bold text-sm sm:text-base
                       hover:rotate-12 transform`}
                   >
                     {note.user_profiles.email.charAt(0).toUpperCase()}
@@ -289,10 +289,10 @@ export default function NotebookView({ userProfile }: NotebookViewProps) {
           
           {/* Popup */}
           <div
-            className="fixed z-50 bg-gradient-to-br from-pink-50 to-blue-50 rounded-2xl shadow-2xl p-6 max-w-md w-80 transform -translate-x-1/2 -translate-y-full border-4 border-white"
+            className="fixed z-50 bg-gradient-to-br from-pink-50 to-blue-50 rounded-2xl shadow-2xl p-4 sm:p-6 max-w-md w-72 sm:w-80 left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 sm:translate-y-0 border-4 border-white"
             style={{
-              left: `${popupNote.position.x}px`,
-              top: `${popupNote.position.y - 10}px`,
+              left: window.innerWidth < 640 ? '50%' : `${popupNote.position.x}px`,
+              top: window.innerWidth < 640 ? '50%' : `${popupNote.position.y - 10}px`,
             }}
           >
             {/* Close button */}

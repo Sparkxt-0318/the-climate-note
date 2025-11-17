@@ -3,26 +3,26 @@ import { NotebookPen, Heart, Globe, Shield, FileText } from 'lucide-react';
 
 export default function AboutView() {
   return (
-    <div className="max-w-4xl mx-auto px-6 py-8">
+    <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
       {/* Header */}
-      <div className="text-center mb-12">
-        <div className="flex items-center justify-center space-x-3 mb-6">
-          <NotebookPen className="w-12 h-12 text-emerald-600" />
-          <h1 className="text-4xl font-bold text-gray-900">About The Climate Note</h1>
+      <div className="text-center mb-8 sm:mb-12">
+        <div className="flex items-center justify-center space-x-2 sm:space-x-3 mb-4 sm:mb-6">
+          <NotebookPen className="w-8 h-8 sm:w-12 sm:h-12 text-emerald-600" />
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900">About The Climate Note</h1>
         </div>
-        <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+        <p className="text-base sm:text-lg lg:text-xl text-gray-600 max-w-2xl mx-auto px-4">
           Turning environmental awareness into daily action, one note at a time
         </p>
       </div>
 
       {/* Founder's Note */}
-      <div className="bg-white rounded-xl border border-gray-200 p-8 mb-8">
-        <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center space-x-2">
-          <Heart className="w-6 h-6 text-emerald-600" />
+      <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6 lg:p-8 mb-6 sm:mb-8">
+        <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-4 sm:mb-6 flex items-center space-x-2">
+          <Heart className="w-5 h-5 sm:w-6 sm:h-6 text-emerald-600" />
           <span>Founder's Note</span>
         </h2>
-        
-        <div className="prose prose-lg max-w-none text-gray-800 leading-relaxed space-y-6">
+
+        <div className="prose prose-sm sm:prose-base lg:prose-lg max-w-none text-gray-800 leading-relaxed space-y-4 sm:space-y-6">
           <p>
             I'm Siyeong (John) Park, founder of The Climate Note and an aspiring environmental scientist. 
             As I approached climate change in various perspectives, through scientific research, policies, 
@@ -43,33 +43,33 @@ export default function AboutView() {
             actions and remind you of a small habit to fix.
           </p>
           
-          <p className="text-center text-xl font-semibold">
+          <p className="text-center text-base sm:text-lg lg:text-xl font-semibold">
             <span className="text-emerald-600">Together, I am confident that climate change is solvable.</span>
           </p>
         </div>
       </div>
 
       {/* Mission Section */}
-      <div className="grid md:grid-cols-3 gap-8">
-        <div className="text-center p-6 bg-emerald-50 rounded-lg">
-          <NotebookPen className="w-8 h-8 text-emerald-600 mx-auto mb-4" />
-          <h3 className="font-semibold text-gray-900 mb-2">Daily Insights</h3>
+      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
+        <div className="text-center p-4 sm:p-6 bg-emerald-50 rounded-lg">
+          <NotebookPen className="w-6 h-6 sm:w-8 sm:h-8 text-emerald-600 mx-auto mb-3 sm:mb-4" />
+          <h3 className="font-semibold text-base sm:text-lg text-gray-900 mb-2">Daily Insights</h3>
           <p className="text-gray-600 text-sm">
             Fresh environmental stories and actionable insights delivered every day
           </p>
         </div>
-        
-        <div className="text-center p-6 bg-emerald-50 rounded-lg">
-          <Heart className="w-8 h-8 text-emerald-600 mx-auto mb-4" />
-          <h3 className="font-semibold text-gray-900 mb-2">Action-Focused</h3>
+
+        <div className="text-center p-4 sm:p-6 bg-emerald-50 rounded-lg">
+          <Heart className="w-6 h-6 sm:w-8 sm:h-8 text-emerald-600 mx-auto mb-3 sm:mb-4" />
+          <h3 className="font-semibold text-base sm:text-lg text-gray-900 mb-2">Action-Focused</h3>
           <p className="text-gray-600 text-sm">
             Turn reading into action with personal climate notes and habit tracking
           </p>
         </div>
-        
-        <div className="text-center p-6 bg-emerald-50 rounded-lg">
-          <Globe className="w-8 h-8 text-emerald-600 mx-auto mb-4" />
-          <h3 className="font-semibold text-gray-900 mb-2">Community Impact</h3>
+
+        <div className="text-center p-4 sm:p-6 bg-emerald-50 rounded-lg">
+          <Globe className="w-6 h-6 sm:w-8 sm:h-8 text-emerald-600 mx-auto mb-3 sm:mb-4" />
+          <h3 className="font-semibold text-base sm:text-lg text-gray-900 mb-2">Community Impact</h3>
           <p className="text-gray-600 text-sm">
             Join a community of young environmental champions making a difference
           </p>
@@ -77,10 +77,10 @@ export default function AboutView() {
       </div>
       
       {/* Legal Links */}
-      <div className="mt-12 pt-8 border-t border-gray-200">
-        <h2 className="text-xl font-bold text-gray-900 mb-6 text-center">Legal Information</h2>
-        
-        <div className="grid md:grid-cols-2 gap-4 mb-6">
+      <div className="mt-8 sm:mt-12 pt-6 sm:pt-8 border-t border-gray-200">
+        <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-4 sm:mb-6 text-center">Legal Information</h2>
+
+        <div className="grid sm:grid-cols-2 gap-4 mb-6">
           <a 
             href="/privacy-policy" 
             className="block p-4 bg-white border border-gray-200 rounded-lg hover:border-emerald-300 hover:shadow-md transition-all"
