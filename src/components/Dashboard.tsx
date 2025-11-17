@@ -3,6 +3,8 @@ import { Session } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import Header from './Header';
 import AdminPanel from './AdminPanel';
+import WriterPanel from './WriterPanel';
+import ArticleReview from './ArticleReview';
 import ArticleView from './ArticleView';
 import NotebookView from './NotebookView';
 import ArchiveView from './ArchiveView';
@@ -23,6 +25,8 @@ export default function Dashboard({ session }: DashboardProps) {
   const [showTutorial, setShowTutorial] = useState(false);
   const [showNotificationSettings, setShowNotificationSettings] = useState(false);
   const [showAdminPanel, setShowAdminPanel] = useState(false);
+  const [showWriterPanel, setShowWriterPanel] = useState(false);
+  const [showArticleReview, setShowArticleReview] = useState(false);
 
   useEffect(() => {
     loadUserProfile();
@@ -157,13 +161,15 @@ export default function Dashboard({ session }: DashboardProps) {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Header 
+      <Header
         userProfile={userProfile}
         currentView={currentView}
         onViewChange={setCurrentView}
         onSignOut={() => supabase.auth.signOut()}
         onNotificationSettings={() => setShowNotificationSettings(true)}
         onAdminPanel={() => setShowAdminPanel(true)}
+        onWriterPanel={() => setShowWriterPanel(true)}
+        onArticleReview={() => setShowArticleReview(true)}
       />
       
       <main className="pt-20" id="main-content">
@@ -212,7 +218,30 @@ export default function Dashboard({ session }: DashboardProps) {
       {/* Admin Panel */}
       {showAdminPanel && (
         <AdminPanel
-          onClose={() => setShowAdminPanel(false)}
+          onClose={() => {
+            setShowAdminPanel(false);
+            loadTodayArticle();
+          }}
+          userId={session.user.id}
+          isAdmin={userProfile?.role === 'admin'}
+        />
+      )}
+
+      {/* Writer Panel */}
+      {showWriterPanel && (
+        <WriterPanel
+          onClose={() => setShowWriterPanel(false)}
+          userId={session.user.id}
+        />
+      )}
+
+      {/* Article Review (Admin Only) */}
+      {showArticleReview && (
+        <ArticleReview
+          onClose={() => {
+            setShowArticleReview(false);
+            loadTodayArticle();
+          }}
         />
       )}
     </div>

@@ -5,9 +5,11 @@ import { showToast } from './ui/Toast';
 
 interface AdminPanelProps {
   onClose: () => void;
+  userId: string;
+  isAdmin: boolean;
 }
 
-export default function AdminPanel({ onClose }: AdminPanelProps) {
+export default function AdminPanel({ onClose, userId, isAdmin }: AdminPanelProps) {
   const [formData, setFormData] = useState({
     title: '',
     subtitle: '',
@@ -16,6 +18,7 @@ export default function AdminPanel({ onClose }: AdminPanelProps) {
     published_date: new Date().toISOString().split('T')[0],
     reading_time: 5,
     is_published: true,
+    status: 'draft' as 'draft' | 'pending_review' | 'approved' | 'published',
     key_takeaways: ['']
   });
   const [loading, setLoading] = useState(false);
@@ -63,10 +66,18 @@ export default function AdminPanel({ onClose }: AdminPanelProps) {
 
       // Process content to handle image URLs
       let processedContent = formData.content;
-      
+
       // Auto-convert plain image URLs to HTML img tags
       const imageUrlRegex = /(https?:\/\/[^\s]+\.(jpg|jpeg|png|gif|webp))/gi;
       processedContent = processedContent.replace(imageUrlRegex, '<img src="$1" alt="Article image" class="w-full rounded-lg my-4" />');
+
+      // Determine status based on admin privileges and checkbox
+      let articleStatus = formData.status;
+      if (isAdmin && formData.is_published) {
+        articleStatus = 'published';
+      } else if (!isAdmin) {
+        articleStatus = 'draft';
+      }
 
       const { error } = await supabase
         .from('articles')
@@ -77,16 +88,22 @@ export default function AdminPanel({ onClose }: AdminPanelProps) {
           category: formData.category || null,
           published_date: formData.published_date,
           reading_time: formData.reading_time,
-          is_published: formData.is_published,
+          is_published: formData.is_published && isAdmin,
+          status: articleStatus,
+          author_id: userId,
           key_takeaways: cleanTakeaways.length > 0 ? cleanTakeaways : null
         });
 
       if (error) throw error;
 
-      showToast('Article published successfully!', 'success');
+      const message = isAdmin
+        ? (formData.is_published ? 'Article published successfully!' : 'Article saved as draft!')
+        : 'Article saved as draft! An admin will review it.';
+
+      showToast(message, 'success');
       onClose();
     } catch (error: any) {
-      showToast(error.message || 'Failed to publish article', 'error');
+      showToast(error.message || 'Failed to save article', 'error');
     } finally {
       setLoading(false);
     }
@@ -268,19 +285,30 @@ export default function AdminPanel({ onClose }: AdminPanelProps) {
             </div>
           </div>
 
-          {/* Publish Status */}
-          <div className="flex items-center space-x-3">
-            <input
-              type="checkbox"
-              id="is_published"
-              checked={formData.is_published}
-              onChange={(e) => handleInputChange('is_published', e.target.checked)}
-              className="w-4 h-4 text-emerald-600 border-gray-300 rounded focus:ring-emerald-500"
-            />
-            <label htmlFor="is_published" className="text-sm font-medium text-gray-700">
-              Publish immediately
-            </label>
-          </div>
+          {/* Publish Status - Only for Admins */}
+          {isAdmin && (
+            <div className="flex items-center space-x-3">
+              <input
+                type="checkbox"
+                id="is_published"
+                checked={formData.is_published}
+                onChange={(e) => handleInputChange('is_published', e.target.checked)}
+                className="w-4 h-4 text-emerald-600 border-gray-300 rounded focus:ring-emerald-500"
+              />
+              <label htmlFor="is_published" className="text-sm font-medium text-gray-700">
+                Publish immediately
+              </label>
+            </div>
+          )}
+
+          {/* Writer Notice */}
+          {!isAdmin && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <p className="text-sm text-blue-700">
+                Your article will be saved as a draft and submitted for admin review before publishing.
+              </p>
+            </div>
+          )}
 
           {/* Submit Button */}
           <div className="flex items-center justify-end space-x-4 pt-6 border-t border-gray-200">
@@ -301,7 +329,7 @@ export default function AdminPanel({ onClose }: AdminPanelProps) {
               ) : (
                 <Save className="w-4 h-4" />
               )}
-              <span>{loading ? 'Publishing...' : 'Publish Article'}</span>
+              <span>{loading ? 'Saving...' : (isAdmin ? 'Publish Article' : 'Save Draft')}</span>
             </button>
           </div>
         </form>

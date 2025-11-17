@@ -1,5 +1,5 @@
 import React from 'react';
-import { NotebookPen, BookOpen, Archive, LogOut, Flame, Info, Bell, Plus } from 'lucide-react';
+import { NotebookPen, BookOpen, Archive, LogOut, Flame, Info, Bell, Plus, FileEdit, CheckSquare } from 'lucide-react';
 import { UserProfile } from '../types';
 
 interface HeaderProps {
@@ -9,9 +9,13 @@ interface HeaderProps {
   onSignOut: () => void;
   onNotificationSettings: () => void;
   onAdminPanel: () => void;
+  onWriterPanel?: () => void;
+  onArticleReview?: () => void;
 }
 
-export default function Header({ userProfile, currentView, onViewChange, onSignOut, onNotificationSettings, onAdminPanel }: HeaderProps) {
+export default function Header({ userProfile, currentView, onViewChange, onSignOut, onNotificationSettings, onAdminPanel, onWriterPanel, onArticleReview }: HeaderProps) {
+  const isAdmin = userProfile?.role === 'admin';
+  const isWriter = userProfile?.role === 'writer' || isAdmin;
   return (
     <header className="fixed top-0 left-0 right-0 bg-white border-b border-gray-100 z-50" id="header">
       <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
@@ -82,13 +86,35 @@ export default function Header({ userProfile, currentView, onViewChange, onSignO
             </div>
           )}
           
-          <button
-            onClick={onAdminPanel}
-            className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
-            title="Add Article (Admin)"
-          >
-            <Plus className="w-4 h-4" />
-          </button>
+          {isWriter && (
+            <button
+              onClick={onAdminPanel}
+              className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+              title={isAdmin ? "Add Article" : "Create Article"}
+            >
+              <Plus className="w-4 h-4" />
+            </button>
+          )}
+
+          {isWriter && onWriterPanel && (
+            <button
+              onClick={onWriterPanel}
+              className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+              title="My Articles"
+            >
+              <FileEdit className="w-4 h-4" />
+            </button>
+          )}
+
+          {isAdmin && onArticleReview && (
+            <button
+              onClick={onArticleReview}
+              className="p-2 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 rounded-lg transition-colors"
+              title="Review Articles"
+            >
+              <CheckSquare className="w-4 h-4" />
+            </button>
+          )}
           
           <button
             onClick={onNotificationSettings}
