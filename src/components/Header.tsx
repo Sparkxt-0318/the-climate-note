@@ -19,16 +19,17 @@ export default function Header({ userProfile, currentView, onViewChange, onSignO
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   return (
-    <header className="fixed top-0 left-0 right-0 bg-white border-b border-gray-100 z-50" id="header">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between">
-        {/* Logo */}
-        <div className="flex items-center space-x-2 sm:space-x-3">
-          <NotebookPen className="w-6 h-6 sm:w-8 sm:h-8 text-emerald-600" />
-          <h1 className="text-base sm:text-xl font-bold text-gray-900">The Climate Note</h1>
-        </div>
+    <>
+      <header className="fixed top-0 left-0 right-0 bg-white border-b border-gray-100 z-50" id="header">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between">
+          {/* Logo */}
+          <div className="flex items-center space-x-2 sm:space-x-3">
+            <NotebookPen className="w-6 h-6 sm:w-8 sm:h-8 text-emerald-600" />
+            <h1 className="text-base sm:text-xl font-bold text-gray-900">The Climate Note</h1>
+          </div>
 
-        {/* Desktop Navigation */}
-        <nav className="hidden lg:flex items-center space-x-8" id="navigation">
+          {/* Desktop Navigation */}
+          <nav className="hidden lg:flex items-center space-x-8" id="navigation">
           <button
             onClick={() => onViewChange('article')}
             className={`flex items-center space-x-2 px-3 py-2 rounded-lg transition-colors ${
@@ -84,10 +85,9 @@ export default function Header({ userProfile, currentView, onViewChange, onSignO
             <div className="flex items-center space-x-1 sm:space-x-2 bg-orange-50 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg" id="streak-counter">
               <Flame className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-orange-500" />
               <span className="font-semibold text-sm sm:text-base text-orange-700">{userProfile.streak}</span>
-              <span className="text-xs sm:text-sm text-orange-600 hidden xs:inline">day streak</span>
+              <span className="text-xs sm:text-sm text-orange-600 hidden sm:inline">day streak</span>
             </div>
           )}
-          
 
           <div className="hidden lg:flex items-center space-x-2">
             {isWriter && (
@@ -135,83 +135,18 @@ export default function Header({ userProfile, currentView, onViewChange, onSignO
               <LogOut className="w-4 h-4" />
             </button>
           </div>
-
-          {/* Mobile Menu Button */}
-          <button
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className="lg:hidden p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
-            aria-label="Toggle menu"
-          >
-            {isMobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-          </button>
         </div>
       </div>
 
-      {/* Mobile Menu */}
+      {/* Mobile Menu Overlay */}
       {isMobileMenuOpen && (
-        <div className="lg:hidden border-t border-gray-100 bg-white">
+        <div className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-40" onClick={() => setIsMobileMenuOpen(false)} />
+      )}
+
+      {/* Mobile Menu - Settings and Actions */}
+      {isMobileMenuOpen && (
+        <div className="lg:hidden fixed bottom-16 left-0 right-0 bg-white border-t border-gray-100 shadow-xl z-50 max-h-[70vh] overflow-y-auto">
           <nav className="px-4 py-3 space-y-1">
-            <button
-              onClick={() => {
-                onViewChange('article');
-                setIsMobileMenuOpen(false);
-              }}
-              className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg transition-colors ${
-                currentView === 'article'
-                  ? 'bg-emerald-50 text-emerald-700'
-                  : 'text-gray-600 hover:bg-gray-50'
-              }`}
-            >
-              <NotebookPen className="w-5 h-5" />
-              <span className="font-medium">Today</span>
-            </button>
-
-            <button
-              onClick={() => {
-                onViewChange('notebook');
-                setIsMobileMenuOpen(false);
-              }}
-              className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg transition-colors ${
-                currentView === 'notebook'
-                  ? 'bg-emerald-50 text-emerald-700'
-                  : 'text-gray-600 hover:bg-gray-50'
-              }`}
-            >
-              <BookOpen className="w-5 h-5" />
-              <span className="font-medium">Notebook</span>
-            </button>
-
-            <button
-              onClick={() => {
-                onViewChange('archive');
-                setIsMobileMenuOpen(false);
-              }}
-              className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg transition-colors ${
-                currentView === 'archive'
-                  ? 'bg-emerald-50 text-emerald-700'
-                  : 'text-gray-600 hover:bg-gray-50'
-              }`}
-            >
-              <Archive className="w-5 h-5" />
-              <span className="font-medium">Archive</span>
-            </button>
-
-            <button
-              onClick={() => {
-                onViewChange('about');
-                setIsMobileMenuOpen(false);
-              }}
-              className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg transition-colors ${
-                currentView === 'about'
-                  ? 'bg-emerald-50 text-emerald-700'
-                  : 'text-gray-600 hover:bg-gray-50'
-              }`}
-            >
-              <Info className="w-5 h-5" />
-              <span className="font-medium">About</span>
-            </button>
-
-            <div className="border-t border-gray-100 my-2 pt-2">
               {isWriter && (
                 <button
                   onClick={() => {
@@ -272,10 +207,75 @@ export default function Header({ userProfile, currentView, onViewChange, onSignO
                 <LogOut className="w-5 h-5" />
                 <span className="font-medium">Sign Out</span>
               </button>
-            </div>
           </nav>
         </div>
       )}
-    </header>
+      </header>
+
+      {/* Mobile Bottom Navigation */}
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 z-50 safe-area-bottom">
+        <div className="flex items-center justify-around px-2 py-2">
+          <button
+            onClick={() => onViewChange('article')}
+            className={`flex flex-col items-center justify-center px-4 py-2 rounded-lg transition-colors flex-1 ${
+              currentView === 'article'
+                ? 'text-emerald-600'
+                : 'text-gray-500'
+            }`}
+          >
+            <NotebookPen className="w-6 h-6 mb-1" />
+            <span className="text-xs font-medium">Today</span>
+          </button>
+
+          <button
+            onClick={() => onViewChange('notebook')}
+            className={`flex flex-col items-center justify-center px-4 py-2 rounded-lg transition-colors flex-1 ${
+              currentView === 'notebook'
+                ? 'text-emerald-600'
+                : 'text-gray-500'
+            }`}
+          >
+            <BookOpen className="w-6 h-6 mb-1" />
+            <span className="text-xs font-medium">Notebook</span>
+          </button>
+
+          <button
+            onClick={() => onViewChange('archive')}
+            className={`flex flex-col items-center justify-center px-4 py-2 rounded-lg transition-colors flex-1 ${
+              currentView === 'archive'
+                ? 'text-emerald-600'
+                : 'text-gray-500'
+            }`}
+          >
+            <Archive className="w-6 h-6 mb-1" />
+            <span className="text-xs font-medium">Archive</span>
+          </button>
+
+          <button
+            onClick={() => onViewChange('about')}
+            className={`flex flex-col items-center justify-center px-4 py-2 rounded-lg transition-colors flex-1 ${
+              currentView === 'about'
+                ? 'text-emerald-600'
+                : 'text-gray-500'
+            }`}
+          >
+            <Info className="w-6 h-6 mb-1" />
+            <span className="text-xs font-medium">About</span>
+          </button>
+
+          <button
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            className={`flex flex-col items-center justify-center px-4 py-2 rounded-lg transition-colors flex-1 ${
+              isMobileMenuOpen
+                ? 'text-emerald-600'
+                : 'text-gray-500'
+            }`}
+          >
+            <Menu className="w-6 h-6 mb-1" />
+            <span className="text-xs font-medium">More</span>
+          </button>
+        </div>
+      </nav>
+    </>
   );
 }
