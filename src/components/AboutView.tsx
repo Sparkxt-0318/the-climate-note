@@ -37,9 +37,9 @@ export default function AboutView() {
           </p>
           
           <p>
-            The Climate Note is different from other newsletters in a way we encourage 
-            <span className="font-semibold text-emerald-600"> you to take actions</span> for the environment. 
-            Through our articles, and the 'climate note\' function, we will help you think more about your 
+            The Climate Note is different from other newsletters in a way we encourage
+            <span className="font-semibold text-emerald-600"> you to take actions</span> for the environment.
+            Through our articles, and the 'climate note' function, we will help you think more about your
             actions and remind you of a small habit to fix.
           </p>
           
