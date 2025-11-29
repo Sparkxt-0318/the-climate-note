@@ -96,7 +96,7 @@ export default function ArticleView({ article, userProfile, onProfileUpdate }: A
   }
 
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+    <div className="max-w-4xl mx-auto px-6 sm:px-8 lg:px-12 py-8 sm:py-10 lg:py-12">
       {/* Article Header */}
       <div className="mb-6 sm:mb-8">
         <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-xs sm:text-sm text-gray-500 mb-3 sm:mb-4">

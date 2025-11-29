@@ -3,7 +3,7 @@ import { NotebookPen, Heart, Globe, Shield, FileText } from 'lucide-react';
 
 export default function AboutView() {
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+    <div className="max-w-4xl mx-auto px-6 sm:px-8 lg:px-12 py-8 sm:py-10 lg:py-12">
       {/* Header */}
       <div className="text-center mb-8 sm:mb-12">
         <div className="flex items-center justify-center space-x-2 sm:space-x-3 mb-4 sm:mb-6">

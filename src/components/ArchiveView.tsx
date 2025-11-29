@@ -55,14 +55,14 @@ export default function ArchiveView() {
 
   if (loading) {
     return (
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 sm:py-12 text-center">
+      <div className="max-w-6xl mx-auto px-6 sm:px-8 lg:px-12 py-8 sm:py-12 text-center">
         <div className="animate-pulse text-emerald-600">Loading archive...</div>
       </div>
     );
   }
 
   return (
-    <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+    <div className="max-w-6xl mx-auto px-6 sm:px-8 lg:px-12 py-8 sm:py-10 lg:py-12">
       {/* Header */}
       <div className="mb-6 sm:mb-8">
         <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-3 sm:mb-4">Article Archive</h1>

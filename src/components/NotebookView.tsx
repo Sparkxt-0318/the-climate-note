@@ -184,7 +184,7 @@ export default function NotebookView({ userProfile }: NotebookViewProps) {
   }
 
   return (
-    <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+    <div className="max-w-6xl mx-auto px-6 sm:px-8 lg:px-12 py-8 sm:py-10 lg:py-12">
       {/* Header */}
       <div className="mb-6 sm:mb-8">
         <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-3 sm:mb-4">Community Notebook</h1>
