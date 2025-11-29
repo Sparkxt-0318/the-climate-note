@@ -3,7 +3,11 @@ import { Calendar, Clock, Archive, Search } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { Article } from '../types';
 
-export default function ArchiveView() {
+interface ArchiveViewProps {
+  onArticleSelect: (article: Article) => void;
+}
+
+export default function ArchiveView({ onArticleSelect }: ArchiveViewProps) {
   const [articles, setArticles] = useState<Article[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -116,7 +120,7 @@ export default function ArchiveView() {
                 </h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                   {categoryArticles.map((article) => (
-                    <ArticleCard key={article.id} article={article} />
+                    <ArticleCard key={article.id} article={article} onSelect={onArticleSelect} />
                   ))}
                 </div>
               </div>
@@ -127,7 +131,7 @@ export default function ArchiveView() {
         // Show as grid when filtering by specific category
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
           {filteredArticles.map((article) => (
-            <ArticleCard key={article.id} article={article} />
+            <ArticleCard key={article.id} article={article} onSelect={onArticleSelect} />
           ))}
         </div>
       )}
@@ -135,9 +139,12 @@ export default function ArchiveView() {
   );
 }
 
-function ArticleCard({ article }: { article: Article }) {
+function ArticleCard({ article, onSelect }: { article: Article; onSelect: (article: Article) => void }) {
   return (
-    <div className="bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-lg transition-all duration-200 cursor-pointer group">
+    <div
+      onClick={() => onSelect(article)}
+      className="bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-lg transition-all duration-200 cursor-pointer group"
+    >
       <div className="p-4 sm:p-6">
         <div className="flex items-center space-x-2 text-xs text-gray-500 mb-2 sm:mb-3">
           <Calendar className="w-3 h-3" />

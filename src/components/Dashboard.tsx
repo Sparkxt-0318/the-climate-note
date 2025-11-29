@@ -20,6 +20,7 @@ interface DashboardProps {
 export default function Dashboard({ session }: DashboardProps) {
   const [currentView, setCurrentView] = useState<'article' | 'notebook' | 'archive' | 'about'>('article');
   const [todayArticle, setTodayArticle] = useState<Article | null>(null);
+  const [selectedArchiveArticle, setSelectedArchiveArticle] = useState<Article | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [showTutorial, setShowTutorial] = useState(false);
@@ -189,7 +190,23 @@ export default function Dashboard({ session }: DashboardProps) {
         )}
         {currentView === 'archive' && (
           <div id="archive-content">
-            <ArchiveView />
+            {selectedArchiveArticle ? (
+              <div>
+                <button
+                  onClick={() => setSelectedArchiveArticle(null)}
+                  className="mb-4 text-emerald-600 hover:text-emerald-700 font-medium flex items-center gap-2"
+                >
+                  ← Back to Archive
+                </button>
+                <ArticleView
+                  article={selectedArchiveArticle}
+                  userProfile={userProfile}
+                  onProfileUpdate={setUserProfile}
+                />
+              </div>
+            ) : (
+              <ArchiveView onArticleSelect={setSelectedArchiveArticle} />
+            )}
           </div>
         )}
         {currentView === 'about' && (
