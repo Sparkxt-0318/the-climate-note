@@ -14,7 +14,12 @@ export default function LandingPage() {
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email || (isLogin && !password && !showForgotPassword)) return;
+    if (!email || !showForgotPassword && !password) return;
+
+    if (!showForgotPassword && password.length < 6) {
+      showToast('Password must be at least 6 characters', 'error');
+      return;
+    }
 
     setLoading(true);
     try {
@@ -23,7 +28,7 @@ export default function LandingPage() {
         const { error } = await supabase.auth.resetPasswordForEmail(email, {
           redirectTo: `${window.location.origin}/reset-password`,
         });
-        
+
         if (error) throw error;
         showToast('Password reset email sent! Check your inbox.', 'success');
         setShowForgotPassword(false);
@@ -33,16 +38,16 @@ export default function LandingPage() {
           email,
           password,
         });
-        
+
         if (error) throw error;
         showToast('Welcome back!', 'success');
       } else {
         // Sign up new user
         const { error } = await supabase.auth.signUp({
           email,
-          password: password || Math.random().toString(36).slice(-8),
+          password,
         });
-        
+
         if (error) throw error;
         showToast('Welcome! Setting up your account...', 'success');
       }
@@ -101,7 +106,10 @@ export default function LandingPage() {
           {!showForgotPassword && (
             <div className="flex items-center justify-center space-x-1 text-sm">
               <button
-                onClick={() => setIsLogin(false)}
+                onClick={() => {
+                  setIsLogin(false);
+                  setPassword('');
+                }}
                 className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                   !isLogin
                     ? 'bg-emerald-100 text-emerald-700'
@@ -112,7 +120,10 @@ export default function LandingPage() {
               </button>
               <span className="text-gray-400">|</span>
               <button
-                onClick={() => setIsLogin(true)}
+                onClick={() => {
+                  setIsLogin(true);
+                  setPassword('');
+                }}
                 className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                   isLogin
                     ? 'bg-emerald-100 text-emerald-700'
@@ -138,8 +149,8 @@ export default function LandingPage() {
                 required
               />
             </div>
-            
-            {isLogin && !showForgotPassword && (
+
+            {!showForgotPassword && (
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                   <Lock className="h-5 w-5 text-gray-400" />
@@ -148,9 +159,10 @@ export default function LandingPage() {
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Enter your password"
+                  placeholder={isLogin ? "Enter your password" : "Create a password (min 6 characters)"}
                   className="w-full pl-12 pr-4 py-4 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-gray-900 placeholder-gray-500 text-lg transition-all"
                   required
+                  minLength={6}
                 />
               </div>
             )}
