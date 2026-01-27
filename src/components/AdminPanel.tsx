@@ -19,7 +19,9 @@ export default function AdminPanel({ onClose, userId, isAdmin }: AdminPanelProps
     reading_time: 5,
     is_published: true,
     status: 'draft' as 'draft' | 'pending_review' | 'approved' | 'published',
-    key_takeaways: ['']
+    key_takeaways: [''],
+    auto_publish: false,
+    scheduled_publish_date: ''
   });
   const [loading, setLoading] = useState(false);
 
@@ -73,32 +75,51 @@ export default function AdminPanel({ onClose, userId, isAdmin }: AdminPanelProps
 
       // Determine status based on admin privileges and checkbox
       let articleStatus = formData.status;
-      if (isAdmin && formData.is_published) {
+      if (isAdmin && formData.is_published && !formData.auto_publish) {
         articleStatus = 'published';
+      } else if (isAdmin && formData.auto_publish) {
+        articleStatus = 'approved'; // Auto-publish articles need approved status
       } else if (!isAdmin) {
         articleStatus = 'draft';
       }
 
+      // Prepare article data
+      const articleData: any = {
+        title: formData.title,
+        subtitle: formData.subtitle || null,
+        content: processedContent,
+        category: formData.category || null,
+        published_date: formData.published_date,
+        reading_time: formData.reading_time,
+        is_published: formData.is_published && isAdmin && !formData.auto_publish,
+        status: articleStatus,
+        author_id: userId,
+        key_takeaways: cleanTakeaways.length > 0 ? cleanTakeaways : null
+      };
+
+      // Add scheduling fields if auto-publish is enabled
+      if (isAdmin && formData.auto_publish && formData.scheduled_publish_date) {
+        articleData.auto_publish = true;
+        articleData.scheduled_publish_date = formData.scheduled_publish_date;
+        articleData.scheduled_at = new Date().toISOString();
+      }
+
       const { error } = await supabase
         .from('articles')
-        .insert({
-          title: formData.title,
-          subtitle: formData.subtitle || null,
-          content: processedContent,
-          category: formData.category || null,
-          published_date: formData.published_date,
-          reading_time: formData.reading_time,
-          is_published: formData.is_published && isAdmin,
-          status: articleStatus,
-          author_id: userId,
-          key_takeaways: cleanTakeaways.length > 0 ? cleanTakeaways : null
-        });
+        .insert(articleData);
 
       if (error) throw error;
 
-      const message = isAdmin
-        ? (formData.is_published ? 'Article published successfully!' : 'Article saved as draft!')
-        : 'Article saved as draft! An admin will review it.';
+      let message;
+      if (isAdmin && formData.auto_publish) {
+        message = `Article scheduled for ${formData.scheduled_publish_date}! It will auto-publish at midnight CST.`;
+      } else if (isAdmin && formData.is_published) {
+        message = 'Article published successfully!';
+      } else if (isAdmin) {
+        message = 'Article saved as draft!';
+      } else {
+        message = 'Article saved as draft! An admin will review it.';
+      }
 
       showToast(message, 'success');
       onClose();
@@ -285,19 +306,81 @@ export default function AdminPanel({ onClose, userId, isAdmin }: AdminPanelProps
             </div>
           </div>
 
-          {/* Publish Status - Only for Admins */}
+          {/* Publish Options - Only for Admins */}
           {isAdmin && (
-            <div className="flex items-center space-x-3">
-              <input
-                type="checkbox"
-                id="is_published"
-                checked={formData.is_published}
-                onChange={(e) => handleInputChange('is_published', e.target.checked)}
-                className="w-4 h-4 text-emerald-600 border-gray-300 rounded focus:ring-emerald-500"
-              />
-              <label htmlFor="is_published" className="text-sm font-medium text-gray-700">
-                Publish immediately
-              </label>
+            <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4 space-y-4">
+              <h4 className="font-medium text-emerald-800 mb-2">📅 Publishing Options</h4>
+
+              {/* Publish Immediately */}
+              <div className="flex items-center space-x-3">
+                <input
+                  type="checkbox"
+                  id="is_published"
+                  checked={formData.is_published && !formData.auto_publish}
+                  onChange={(e) => {
+                    if (e.target.checked) {
+                      handleInputChange('auto_publish', false);
+                    }
+                    handleInputChange('is_published', e.target.checked);
+                  }}
+                  disabled={formData.auto_publish}
+                  className="w-4 h-4 text-emerald-600 border-gray-300 rounded focus:ring-emerald-500 disabled:opacity-50"
+                />
+                <label htmlFor="is_published" className="text-sm font-medium text-gray-700">
+                  Publish immediately
+                </label>
+              </div>
+
+              {/* Schedule for Auto-Publish */}
+              <div className="space-y-3">
+                <div className="flex items-center space-x-3">
+                  <input
+                    type="checkbox"
+                    id="auto_publish"
+                    checked={formData.auto_publish}
+                    onChange={(e) => {
+                      handleInputChange('auto_publish', e.target.checked);
+                      if (e.target.checked) {
+                        handleInputChange('is_published', false);
+                        // Set default scheduled date to tomorrow
+                        const tomorrow = new Date();
+                        tomorrow.setDate(tomorrow.getDate() + 1);
+                        handleInputChange('scheduled_publish_date', tomorrow.toISOString().split('T')[0]);
+                      }
+                    }}
+                    className="w-4 h-4 text-emerald-600 border-gray-300 rounded focus:ring-emerald-500"
+                  />
+                  <label htmlFor="auto_publish" className="text-sm font-medium text-gray-700">
+                    Schedule for auto-publish 🤖
+                  </label>
+                </div>
+
+                {/* Scheduled Date Picker */}
+                {formData.auto_publish && (
+                  <div className="ml-7 space-y-2">
+                    <label className="block text-sm font-medium text-gray-700">
+                      Schedule publish date (CST timezone)
+                    </label>
+                    <input
+                      type="date"
+                      value={formData.scheduled_publish_date}
+                      onChange={(e) => handleInputChange('scheduled_publish_date', e.target.value)}
+                      min={new Date().toISOString().split('T')[0]}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                      required={formData.auto_publish}
+                    />
+                    <p className="text-xs text-gray-600">
+                      Article will automatically publish at midnight CST on this date
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Helper Text */}
+              <div className="text-xs text-emerald-700 bg-white rounded p-3">
+                <p><strong>Publish immediately:</strong> Article goes live right now</p>
+                <p><strong>Auto-publish:</strong> Article automatically publishes at midnight CST on scheduled date</p>
+              </div>
             </div>
           )}
 
@@ -329,7 +412,17 @@ export default function AdminPanel({ onClose, userId, isAdmin }: AdminPanelProps
               ) : (
                 <Save className="w-4 h-4" />
               )}
-              <span>{loading ? 'Saving...' : (isAdmin ? 'Publish Article' : 'Save Draft')}</span>
+              <span>
+                {loading
+                  ? 'Saving...'
+                  : isAdmin && formData.auto_publish
+                  ? 'Schedule Article'
+                  : isAdmin && formData.is_published
+                  ? 'Publish Article'
+                  : isAdmin
+                  ? 'Save Draft'
+                  : 'Save Draft'}
+              </span>
             </button>
           </div>
         </form>

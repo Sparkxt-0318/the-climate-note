@@ -1,0 +1,60 @@
+name: Auto-Publish Scheduled Articles
+
+# Runs daily at midnight CST (4:00 PM UTC = midnight CST/UTC+8)
+# CST is UTC+8, so midnight CST = 16:00 UTC (4 PM UTC)
+on:
+  schedule:
+    # Cron syntax: minute hour day-of-month month day-of-week
+    # "0 16 * * *" = Every day at 16:00 UTC (midnight CST)
+    - cron: '0 16 * * *'
+
+  # Allow manual trigger for testing
+  workflow_dispatch:
+
+jobs:
+  auto-publish:
+    runs-on: ubuntu-latest
+    name: Trigger Auto-Publish Edge Function
+
+    steps:
+      - name: Get current date (CST)
+        id: date
+        run: |
+          # Calculate CST date (UTC+8)
+          CST_DATE=$(TZ=Asia/Shanghai date +"%Y-%m-%d %H:%M CST")
+          echo "cst_date=$CST_DATE" >> $GITHUB_OUTPUT
+          echo "Running auto-publish for: $CST_DATE"
+
+      - name: Call Supabase Edge Function
+        run: |
+          echo "Calling auto-publish Edge Function..."
+
+          # Call the Edge Function
+          response=$(curl -s -w "\n%{http_code}" \
+            -X POST \
+            "${{ secrets.SUPABASE_URL }}/functions/v1/auto-publish-articles" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}" \
+            -H "Content-Type: application/json")
+
+          # Extract status code (last line) and body (everything before)
+          http_code=$(echo "$response" | tail -n1)
+          body=$(echo "$response" | sed '$d')
+
+          echo "HTTP Status: $http_code"
+          echo "Response:"
+          echo "$body" | jq '.' || echo "$body"
+
+          # Check if request was successful
+          if [ "$http_code" -eq 200 ]; then
+            echo "✅ Auto-publish completed successfully!"
+          else
+            echo "❌ Auto-publish failed with status $http_code"
+            exit 1
+          fi
+
+      - name: Report Results
+        if: always()
+        run: |
+          echo "📊 Auto-Publish Report"
+          echo "Date: ${{ steps.date.outputs.cst_date }}"
+          echo "Status: ${{ job.status }}"
