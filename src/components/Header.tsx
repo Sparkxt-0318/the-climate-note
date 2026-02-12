@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
-import { NotebookPen, BookOpen, Archive, LogOut, Flame, Info, Bell, Plus, FileEdit, CheckSquare, Menu, X, Target } from 'lucide-react';
+import { NotebookPen, BookOpen, Archive, LogOut, Flame, Info, Bell, Plus, FileEdit, CheckSquare, Menu, X, Target, BarChart2 } from 'lucide-react';
 import { UserProfile } from '../types';
 
 interface HeaderProps {
   userProfile: UserProfile | null;
-  currentView: 'article' | 'notebook' | 'archive' | 'about' | 'goals';
-  onViewChange: (view: 'article' | 'notebook' | 'archive' | 'about' | 'goals') => void;
+  currentView: 'article' | 'notebook' | 'archive' | 'about' | 'goals' | 'impact';
+  onViewChange: (view: 'article' | 'notebook' | 'archive' | 'about' | 'goals' | 'impact') => void;
   onSignOut: () => void;
   onNotificationSettings: () => void;
   onAdminPanel: () => void;
@@ -76,6 +76,18 @@ export default function Header({ userProfile, currentView, onViewChange, onSignO
           >
             <Target className="w-4 h-4" />
             <span className="font-medium">Goals</span>
+          </button>
+
+          <button
+            onClick={() => onViewChange('impact')}
+            className={`flex items-center space-x-2 px-3 py-2 rounded-lg transition-colors ${
+              currentView === 'impact'
+                ? 'bg-emerald-50 text-emerald-700'
+                : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            <BarChart2 className="w-4 h-4" />
+            <span className="font-medium">Impact</span>
           </button>
 
           <button
@@ -273,6 +285,18 @@ export default function Header({ userProfile, currentView, onViewChange, onSignO
           >
             <Target className="w-6 h-6 mb-1" />
             <span className="text-xs font-medium">Goals</span>
+          </button>
+
+          <button
+            onClick={() => onViewChange('impact')}
+            className={`flex flex-col items-center justify-center px-4 py-2 rounded-lg transition-colors flex-1 ${
+              currentView === 'impact'
+                ? 'text-emerald-600'
+                : 'text-gray-500'
+            }`}
+          >
+            <BarChart2 className="w-6 h-6 mb-1" />
+            <span className="text-xs font-medium">Impact</span>
           </button>
 
           <button

@@ -45,15 +45,28 @@ export default function ArticleView({ article, userProfile, onProfileUpdate }: A
 
     setLoading(true);
     try {
-      const { error: noteError } = await supabase
+      const { data: noteData, error: noteError } = await supabase
         .from('user_notes')
         .insert({
           user_id: userProfile.id,
           article_id: article.id,
           content: noteText.trim(),
-        });
+        })
+        .select()
+        .single();
 
       if (noteError) throw noteError;
+
+      // Fire-and-forget AI impact classification (doesn't block the user)
+      if (noteData) {
+        supabase.functions.invoke('classify-note-impact', {
+          body: {
+            note_id: noteData.id,
+            note_content: noteData.content,
+            user_id: userProfile.id,
+          },
+        }).catch(err => console.error('Impact classification failed (non-critical):', err));
+      }
 
       // Update user profile with new streak and note count
       const newStreak = userProfile.streak + 1;
@@ -76,7 +89,7 @@ export default function ArticleView({ article, userProfile, onProfileUpdate }: A
       setHasNoteToday(true);
       setNoteText('');
       setShowNoteForm(false);
-      showToast('Note saved! Your streak continues!', 'success');
+      showToast(`Note saved! ${newStreak} day streak! 🔥`, 'success');
     } catch (error: any) {
       showToast(error.message, 'error');
     } finally {
