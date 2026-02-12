@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
-import { NotebookPen, BookOpen, Archive, LogOut, Flame, Info, Bell, Plus, FileEdit, CheckSquare, Menu, X } from 'lucide-react';
+import { NotebookPen, BookOpen, Archive, LogOut, Flame, Info, Bell, Plus, FileEdit, CheckSquare, Menu, X, Target } from 'lucide-react';
 import { UserProfile } from '../types';
 
 interface HeaderProps {
   userProfile: UserProfile | null;
-  currentView: 'article' | 'notebook' | 'archive' | 'about';
-  onViewChange: (view: 'article' | 'notebook' | 'archive' | 'about') => void;
+  currentView: 'article' | 'notebook' | 'archive' | 'about' | 'goals';
+  onViewChange: (view: 'article' | 'notebook' | 'archive' | 'about' | 'goals') => void;
   onSignOut: () => void;
   onNotificationSettings: () => void;
   onAdminPanel: () => void;
@@ -64,6 +64,18 @@ export default function Header({ userProfile, currentView, onViewChange, onSignO
           >
             <Archive className="w-4 h-4" />
             <span className="font-medium">Archive</span>
+          </button>
+
+          <button
+            onClick={() => onViewChange('goals')}
+            className={`flex items-center space-x-2 px-3 py-2 rounded-lg transition-colors ${
+              currentView === 'goals'
+                ? 'bg-emerald-50 text-emerald-700'
+                : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            <Target className="w-4 h-4" />
+            <span className="font-medium">Goals</span>
           </button>
 
           <button
@@ -249,6 +261,18 @@ export default function Header({ userProfile, currentView, onViewChange, onSignO
           >
             <Archive className="w-6 h-6 mb-1" />
             <span className="text-xs font-medium">Archive</span>
+          </button>
+
+          <button
+            onClick={() => onViewChange('goals')}
+            className={`flex flex-col items-center justify-center px-4 py-2 rounded-lg transition-colors flex-1 ${
+              currentView === 'goals'
+                ? 'text-emerald-600'
+                : 'text-gray-500'
+            }`}
+          >
+            <Target className="w-6 h-6 mb-1" />
+            <span className="text-xs font-medium">Goals</span>
           </button>
 
           <button
