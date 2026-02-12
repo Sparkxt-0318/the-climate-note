@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { NotebookPen, BookOpen, Archive, LogOut, Flame, Info, Bell, Plus, FileEdit, CheckSquare, Menu, X, Target, BarChart2, Trophy } from 'lucide-react';
+import { NotebookPen, BookOpen, Archive, LogOut, Flame, Info, Bell, Plus, FileEdit, CheckSquare, Menu, X, Target, BarChart2, Trophy, UserCircle } from 'lucide-react';
 import { UserProfile } from '../types';
 
 interface HeaderProps {
@@ -11,9 +11,10 @@ interface HeaderProps {
   onAdminPanel: () => void;
   onWriterPanel?: () => void;
   onArticleReview?: () => void;
+  onProfileSettings: () => void;
 }
 
-export default function Header({ userProfile, currentView, onViewChange, onSignOut, onNotificationSettings, onAdminPanel, onWriterPanel, onArticleReview }: HeaderProps) {
+export default function Header({ userProfile, currentView, onViewChange, onSignOut, onNotificationSettings, onAdminPanel, onWriterPanel, onArticleReview, onProfileSettings }: HeaderProps) {
   const isAdmin = userProfile?.role === 'admin';
   const isWriter = userProfile?.role === 'writer' || isAdmin;
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -157,6 +158,14 @@ export default function Header({ userProfile, currentView, onViewChange, onSignO
             )}
 
             <button
+              onClick={onProfileSettings}
+              className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+              title="Edit Profile"
+            >
+              <UserCircle className="w-4 h-4" />
+            </button>
+
+            <button
               onClick={onNotificationSettings}
               className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
               title="Notification Settings"
@@ -221,6 +230,17 @@ export default function Header({ userProfile, currentView, onViewChange, onSignO
                   <span className="font-medium">Review Articles</span>
                 </button>
               )}
+
+              <button
+                onClick={() => {
+                  onProfileSettings();
+                  setIsMobileMenuOpen(false);
+                }}
+                className="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-gray-600 hover:bg-gray-50 transition-colors"
+              >
+                <UserCircle className="w-5 h-5" />
+                <span className="font-medium">Edit Profile</span>
+              </button>
 
               <button
                 onClick={() => {

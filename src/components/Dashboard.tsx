@@ -12,6 +12,7 @@ import AboutView from './AboutView';
 import GoalsView from './GoalsView';
 import ImpactDashboard from './ImpactDashboard';
 import LeaderboardView from './LeaderboardView';
+import ProfileSettings from './ProfileSettings';
 import NotificationSettings from './NotificationSettings';
 import Tutorial from './Tutorial';
 import { Article, UserNote, UserProfile } from '../types';
@@ -31,6 +32,7 @@ export default function Dashboard({ session }: DashboardProps) {
   const [showAdminPanel, setShowAdminPanel] = useState(false);
   const [showWriterPanel, setShowWriterPanel] = useState(false);
   const [showArticleReview, setShowArticleReview] = useState(false);
+  const [showProfileSettings, setShowProfileSettings] = useState(false);
 
   useEffect(() => {
     loadUserProfile();
@@ -174,6 +176,7 @@ export default function Dashboard({ session }: DashboardProps) {
         onAdminPanel={() => setShowAdminPanel(true)}
         onWriterPanel={() => setShowWriterPanel(true)}
         onArticleReview={() => setShowArticleReview(true)}
+        onProfileSettings={() => setShowProfileSettings(true)}
       />
       
       <main className="pt-20 sm:pt-24 pb-24 lg:pb-8" id="main-content">
@@ -243,6 +246,18 @@ export default function Dashboard({ session }: DashboardProps) {
         />
       )}
       
+      {/* Profile Settings */}
+      {showProfileSettings && userProfile && (
+        <ProfileSettings
+          userProfile={userProfile}
+          onClose={() => setShowProfileSettings(false)}
+          onProfileUpdate={(updated) => {
+            setUserProfile(updated);
+            setShowProfileSettings(false);
+          }}
+        />
+      )}
+
       {/* Notification Settings */}
       {showNotificationSettings && (
         <NotificationSettings
