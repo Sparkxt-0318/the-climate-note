@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Clock, StickyNote, CreditCard as Edit3, Send, CheckCircle } from 'lucide-react';
+import { Calendar, Clock, StickyNote, CreditCard as Edit3, Send, CheckCircle, Share2 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { Article, UserProfile, UserNote } from '../types';
 import { showToast } from './ui/Toast';
+import NoteCardGenerator from './NoteCardGenerator';
 
 interface ArticleViewProps {
   article: Article | null;
@@ -14,6 +15,8 @@ export default function ArticleView({ article, userProfile, onProfileUpdate }: A
   const [noteText, setNoteText] = useState('');
   const [showNoteForm, setShowNoteForm] = useState(false);
   const [hasNoteToday, setHasNoteToday] = useState(false);
+  const [savedNote, setSavedNote] = useState<UserNote | null>(null);
+  const [showShareCard, setShowShareCard] = useState(false);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -34,6 +37,7 @@ export default function ArticleView({ article, userProfile, onProfileUpdate }: A
         .maybeSingle();
 
       setHasNoteToday(!!data && !error);
+      if (data && !error) setSavedNote(data);
     } catch (error) {
       console.error('Error checking today\'s note:', error);
     }
@@ -86,6 +90,7 @@ export default function ArticleView({ article, userProfile, onProfileUpdate }: A
       if (profileError) throw profileError;
 
       onProfileUpdate(updatedProfile);
+      setSavedNote(noteData);
       setHasNoteToday(true);
       setNoteText('');
       setShowNoteForm(false);
@@ -175,6 +180,15 @@ export default function ArticleView({ article, userProfile, onProfileUpdate }: A
         </div>
       )}
 
+      {/* Note Card Generator Modal */}
+      {showShareCard && savedNote && userProfile && (
+        <NoteCardGenerator
+          note={{ ...savedNote, article_title: article.title }}
+          userProfile={userProfile}
+          onClose={() => setShowShareCard(false)}
+        />
+      )}
+
       {/* Action Note Section */}
       <div className="bg-white border-2 border-emerald-200 rounded-xl p-4 sm:p-6" id="action-note-section">
         {hasNoteToday ? (
@@ -186,6 +200,15 @@ export default function ArticleView({ article, userProfile, onProfileUpdate }: A
             <p className="text-sm sm:text-base text-gray-600">
               Great job! Visit your Notebook to see what others are doing to make a difference.
             </p>
+            {savedNote && userProfile && (
+              <button
+                onClick={() => setShowShareCard(true)}
+                className="inline-flex items-center gap-2 border border-emerald-300 text-emerald-700 hover:bg-emerald-50 font-medium px-4 py-2 rounded-lg transition-colors text-sm"
+              >
+                <Share2 className="w-4 h-4" />
+                Share your note
+              </button>
+            )}
           </div>
         ) : !showNoteForm ? (
           <div className="text-center space-y-3 sm:space-y-4">

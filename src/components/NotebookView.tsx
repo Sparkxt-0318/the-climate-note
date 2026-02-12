@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { BookOpen, Users, Heart, Calendar, X } from 'lucide-react';
+import { BookOpen, Users, Heart, Calendar, X, Share2 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { showToast } from './ui/Toast';
 import { UserNote, UserProfile } from '../types';
+import NoteCardGenerator from './NoteCardGenerator';
 
 interface NotebookViewProps {
   userProfile: UserProfile | null;
@@ -25,6 +26,7 @@ export default function NotebookView({ userProfile }: NotebookViewProps) {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'mine'>('all');
   const [popupNote, setPopupNote] = useState<PopupNote | null>(null);
+  const [shareNote, setShareNote] = useState<(UserNote & { article_title?: string }) | null>(null);
 
   useEffect(() => {
     loadNotes();
@@ -278,6 +280,15 @@ export default function NotebookView({ userProfile }: NotebookViewProps) {
         </div>
       )}
 
+      {/* Note Card Generator Modal */}
+      {shareNote && userProfile && (
+        <NoteCardGenerator
+          note={shareNote}
+          userProfile={userProfile}
+          onClose={() => setShareNote(null)}
+        />
+      )}
+
       {/* Popup Modal */}
       {popupNote && (
         <>
@@ -335,8 +346,8 @@ export default function NotebookView({ userProfile }: NotebookViewProps) {
               </p>
             </div>
 
-            {/* Encourage button */}
-            <div className="flex items-center justify-center">
+            {/* Action buttons */}
+            <div className="flex items-center justify-center gap-2 flex-wrap">
               <button
                 onClick={() => handleEncourage(popupNote.note.id, popupNote.note.user_has_reacted)}
                 className={`flex items-center space-x-2 px-5 py-2 rounded-full text-sm font-semibold transition-all transform hover:scale-105 shadow-md ${
@@ -351,6 +362,27 @@ export default function NotebookView({ userProfile }: NotebookViewProps) {
                   {popupNote.note.reaction_count > 0 && ` (${popupNote.note.reaction_count})`}
                 </span>
               </button>
+
+              {/* Share button — only for the user's own notes */}
+              {userProfile && popupNote.note.user_id === userProfile.id && (
+                <button
+                  onClick={() => {
+                    setShareNote({
+                      id: popupNote.note.id,
+                      user_id: popupNote.note.user_id,
+                      article_id: popupNote.note.article_id,
+                      content: popupNote.note.content,
+                      created_at: popupNote.note.created_at,
+                      article_title: popupNote.note.articles.title,
+                    });
+                    closePopup();
+                  }}
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold bg-white border border-emerald-300 text-emerald-700 hover:bg-emerald-50 transition-all shadow-md"
+                >
+                  <Share2 className="w-4 h-4" />
+                  Share
+                </button>
+              )}
             </div>
           </div>
         </>
