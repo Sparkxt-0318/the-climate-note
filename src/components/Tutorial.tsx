@@ -3,7 +3,7 @@ import { X, ArrowRight, ArrowLeft, NotebookPen, BookOpen, Archive, CreditCard as
 
 interface TutorialProps {
   onComplete: () => void;
-  currentView: 'article' | 'notebook' | 'archive' | 'about';
+  currentView: string;
   onViewChange: (view: 'article' | 'notebook' | 'archive' | 'about') => void;
 }
 

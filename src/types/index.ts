@@ -15,6 +15,9 @@ export interface Article {
 export interface UserProfile {
   id: string;
   email?: string;
+  display_name?: string;
+  avatar_url?: string;
+  role?: 'user' | 'writer' | 'admin';
   streak: number;
   total_notes: number;
   last_note_date?: string;

@@ -11,6 +11,7 @@ import ArchiveView from './ArchiveView';
 import AboutView from './AboutView';
 import GoalsView from './GoalsView';
 import ImpactDashboard from './ImpactDashboard';
+import LeaderboardView from './LeaderboardView';
 import NotificationSettings from './NotificationSettings';
 import Tutorial from './Tutorial';
 import { Article, UserNote, UserProfile } from '../types';
@@ -20,7 +21,7 @@ interface DashboardProps {
 }
 
 export default function Dashboard({ session }: DashboardProps) {
-  const [currentView, setCurrentView] = useState<'article' | 'notebook' | 'archive' | 'about' | 'goals' | 'impact'>('article');
+  const [currentView, setCurrentView] = useState<'article' | 'notebook' | 'archive' | 'about' | 'goals' | 'impact' | 'leaderboard'>('article');
   const [todayArticle, setTodayArticle] = useState<Article | null>(null);
   const [selectedArchiveArticle, setSelectedArchiveArticle] = useState<Article | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
@@ -224,6 +225,11 @@ export default function Dashboard({ session }: DashboardProps) {
         {currentView === 'impact' && (
           <div id="impact-content">
             <ImpactDashboard userProfile={userProfile} />
+          </div>
+        )}
+        {currentView === 'leaderboard' && (
+          <div id="leaderboard-content">
+            <LeaderboardView userProfile={userProfile} />
           </div>
         )}
       </main>
