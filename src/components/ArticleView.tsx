@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Clock, StickyNote, CreditCard as Edit3, Send, CheckCircle, Share2 } from 'lucide-react';
+import { Calendar, Clock, StickyNote, CreditCard as Edit3, Send, CheckCircle, Share2, Sparkles, RefreshCw, PenLine } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { Article, UserProfile, UserNote } from '../types';
 import { showToast } from './ui/Toast';
@@ -11,13 +11,17 @@ interface ArticleViewProps {
   onProfileUpdate: (profile: UserProfile) => void;
 }
 
+type NoteStep = 'prompt' | 'loading' | 'selecting' | 'submitting';
+
 export default function ArticleView({ article, userProfile, onProfileUpdate }: ArticleViewProps) {
-  const [noteText, setNoteText] = useState('');
-  const [showNoteForm, setShowNoteForm] = useState(false);
+  const [noteStep, setNoteStep] = useState<NoteStep>('prompt');
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [selectedSuggestion, setSelectedSuggestion] = useState<string | null>(null);
+  const [showCustom, setShowCustom] = useState(false);
+  const [customText, setCustomText] = useState('');
   const [hasNoteToday, setHasNoteToday] = useState(false);
   const [savedNote, setSavedNote] = useState<UserNote | null>(null);
   const [showShareCard, setShowShareCard] = useState(false);
-  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (article && userProfile) {
@@ -27,7 +31,6 @@ export default function ArticleView({ article, userProfile, onProfileUpdate }: A
 
   const checkTodayNote = async () => {
     if (!article || !userProfile) return;
-
     try {
       const { data, error } = await supabase
         .from('user_notes')
@@ -43,25 +46,66 @@ export default function ArticleView({ article, userProfile, onProfileUpdate }: A
     }
   };
 
-  const handleSubmitNote = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!noteText.trim() || !article || !userProfile) return;
+  const fetchSuggestions = async () => {
+    if (!article) return;
+    setNoteStep('loading');
+    setSelectedSuggestion(null);
+    setShowCustom(false);
+    setCustomText('');
 
-    setLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-action-suggestions', {
+        body: {
+          article_title: article.title,
+          article_subtitle: article.subtitle || '',
+          key_takeaways: article.key_takeaways || [],
+          article_content: article.content || '',
+        },
+      });
+
+      if (error) throw error;
+      if (data?.suggestions && Array.isArray(data.suggestions)) {
+        setSuggestions(data.suggestions);
+        setNoteStep('selecting');
+      } else {
+        throw new Error('No suggestions returned');
+      }
+    } catch (err) {
+      console.error('Failed to fetch suggestions:', err);
+      // Fallback: show generic suggestions based on article title
+      setSuggestions([
+        `I will research more about ${article.title.toLowerCase()} and share what I learn with a friend.`,
+        `I'll make one small change in my daily routine this week inspired by this article.`,
+        `I will track my progress on this environmental action for the next 7 days.`,
+      ]);
+      setNoteStep('selecting');
+    }
+  };
+
+  const getFinalNote = (): string => {
+    if (showCustom) return customText.trim();
+    return selectedSuggestion || '';
+  };
+
+  const handleSubmitNote = async () => {
+    const finalNote = getFinalNote();
+    if (!finalNote || !article || !userProfile) return;
+
+    setNoteStep('submitting');
     try {
       const { data: noteData, error: noteError } = await supabase
         .from('user_notes')
         .insert({
           user_id: userProfile.id,
           article_id: article.id,
-          content: noteText.trim(),
+          content: finalNote,
         })
         .select()
         .single();
 
       if (noteError) throw noteError;
 
-      // Fire-and-forget AI impact classification (doesn't block the user)
+      // Fire-and-forget AI impact classification
       if (noteData) {
         supabase.functions.invoke('classify-note-impact', {
           body: {
@@ -72,7 +116,6 @@ export default function ArticleView({ article, userProfile, onProfileUpdate }: A
         }).catch(err => console.error('Impact classification failed (non-critical):', err));
       }
 
-      // Update user profile with new streak and note count
       const newStreak = userProfile.streak + 1;
       const newTotalNotes = userProfile.total_notes + 1;
 
@@ -92,13 +135,11 @@ export default function ArticleView({ article, userProfile, onProfileUpdate }: A
       onProfileUpdate(updatedProfile);
       setSavedNote(noteData);
       setHasNoteToday(true);
-      setNoteText('');
-      setShowNoteForm(false);
+      setNoteStep('prompt');
       showToast(`Note saved! ${newStreak} day streak! 🔥`, 'success');
     } catch (error: any) {
       showToast(error.message, 'error');
-    } finally {
-      setLoading(false);
+      setNoteStep('selecting');
     }
   };
 
@@ -113,6 +154,8 @@ export default function ArticleView({ article, userProfile, onProfileUpdate }: A
     );
   }
 
+  const canSubmit = showCustom ? customText.trim().length > 0 : selectedSuggestion !== null;
+
   return (
     <div className="max-w-4xl mx-auto px-6 sm:px-8 lg:px-12 py-8 sm:py-10 lg:py-12">
       {/* Article Header */}
@@ -121,15 +164,10 @@ export default function ArticleView({ article, userProfile, onProfileUpdate }: A
           <div className="flex items-center space-x-1">
             <Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             <span className="hidden sm:inline">{new Date(article.published_date).toLocaleDateString('en-US', {
-              weekday: 'long',
-              year: 'numeric',
-              month: 'long',
-              day: 'numeric'
+              weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
             })}</span>
             <span className="sm:hidden">{new Date(article.published_date).toLocaleDateString('en-US', {
-              month: 'short',
-              day: 'numeric',
-              year: 'numeric'
+              month: 'short', day: 'numeric', year: 'numeric'
             })}</span>
           </div>
           <div className="flex items-center space-x-1">
@@ -146,7 +184,6 @@ export default function ArticleView({ article, userProfile, onProfileUpdate }: A
         <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 leading-tight mb-3 sm:mb-4">
           {article.title}
         </h1>
-
         {article.subtitle && (
           <p className="text-base sm:text-lg lg:text-xl text-gray-600 leading-relaxed">
             {article.subtitle}
@@ -162,7 +199,7 @@ export default function ArticleView({ article, userProfile, onProfileUpdate }: A
         />
       </div>
 
-      {/* Sticky Note Summary */}
+      {/* Key Takeaways */}
       {article.key_takeaways && (
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 sm:p-6 mb-6 sm:mb-8">
           <div className="flex items-center space-x-2 mb-3">
@@ -191,6 +228,8 @@ export default function ArticleView({ article, userProfile, onProfileUpdate }: A
 
       {/* Action Note Section */}
       <div className="bg-white border-2 border-emerald-200 rounded-xl p-4 sm:p-6" id="action-note-section">
+
+        {/* ── Already done ── */}
         {hasNoteToday ? (
           <div className="text-center space-y-3 sm:space-y-4">
             <div className="flex items-center justify-center space-x-2 text-emerald-600">
@@ -210,53 +249,152 @@ export default function ArticleView({ article, userProfile, onProfileUpdate }: A
               </button>
             )}
           </div>
-        ) : !showNoteForm ? (
+
+        /* ── Initial prompt ── */
+        ) : noteStep === 'prompt' ? (
           <div className="text-center space-y-3 sm:space-y-4">
             <h3 className="text-lg sm:text-xl font-semibold text-gray-900">What will you do differently?</h3>
             <p className="text-sm sm:text-base text-gray-600">
-              After reading this article, what's one specific action you can take in your daily life
-              to make a positive environmental impact?
+              Pick an action inspired by today's article — or write your own.
             </p>
             <button
-              onClick={() => setShowNoteForm(true)}
+              onClick={fetchSuggestions}
               className="inline-flex items-center space-x-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-4 sm:px-6 py-2.5 sm:py-3 rounded-lg transition-colors text-sm sm:text-base"
             >
               <Edit3 className="w-4 h-4" />
               <span>Write My Action Note</span>
             </button>
           </div>
+
+        /* ── Loading suggestions ── */
+        ) : noteStep === 'loading' ? (
+          <div className="text-center py-6 space-y-3">
+            <div className="flex items-center justify-center gap-2 text-emerald-600">
+              <Sparkles className="w-5 h-5 animate-pulse" />
+              <span className="font-medium text-sm">Generating ideas for you…</span>
+            </div>
+            <div className="flex justify-center gap-1">
+              {[0, 1, 2].map(i => (
+                <div
+                  key={i}
+                  className="w-2 h-2 bg-emerald-400 rounded-full animate-bounce"
+                  style={{ animationDelay: `${i * 0.15}s` }}
+                />
+              ))}
+            </div>
+          </div>
+
+        /* ── Selecting / writing ── */
         ) : (
-          <form onSubmit={handleSubmitNote} className="space-y-4">
-            <h3 className="text-lg sm:text-xl font-semibold text-gray-900">My Environmental Action</h3>
-            <textarea
-              value={noteText}
-              onChange={(e) => setNoteText(e.target.value)}
-              placeholder="Write about a specific action you'll take... (e.g., 'I'll switch to reusable produce bags when grocery shopping' or 'I'll research sustainable fashion brands before my next clothing purchase')"
-              className="w-full h-32 sm:h-40 p-3 sm:p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent resize-none text-sm sm:text-base"
-              required
-            />
+          <div className="space-y-4">
             <div className="flex items-center justify-between">
+              <h3 className="text-base sm:text-lg font-semibold text-gray-900">Choose your action</h3>
               <button
-                type="button"
-                onClick={() => setShowNoteForm(false)}
-                className="text-gray-600 hover:text-gray-900 font-medium text-sm sm:text-base"
+                onClick={fetchSuggestions}
+                className="flex items-center gap-1 text-xs text-gray-400 hover:text-emerald-600 transition-colors"
+                title="Regenerate suggestions"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                Regenerate
+              </button>
+            </div>
+
+            {/* 3 AI suggestions */}
+            <div className="space-y-2">
+              {suggestions.map((s, i) => {
+                const isSelected = selectedSuggestion === s && !showCustom;
+                return (
+                  <button
+                    key={i}
+                    onClick={() => {
+                      setSelectedSuggestion(s);
+                      setShowCustom(false);
+                    }}
+                    className={`w-full text-left px-4 py-3 rounded-xl border-2 transition-all text-sm leading-relaxed ${
+                      isSelected
+                        ? 'border-emerald-500 bg-emerald-50 text-emerald-800'
+                        : 'border-gray-200 bg-white text-gray-700 hover:border-emerald-300 hover:bg-emerald-50/40'
+                    }`}
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className={`w-5 h-5 rounded-full border-2 flex-shrink-0 mt-0.5 flex items-center justify-center transition-colors ${
+                        isSelected ? 'border-emerald-500 bg-emerald-500' : 'border-gray-300'
+                      }`}>
+                        {isSelected && (
+                          <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                          </svg>
+                        )}
+                      </div>
+                      <span>{s}</span>
+                    </div>
+                  </button>
+                );
+              })}
+
+              {/* Other / write your own */}
+              <button
+                onClick={() => {
+                  setShowCustom(true);
+                  setSelectedSuggestion(null);
+                }}
+                className={`w-full text-left px-4 py-3 rounded-xl border-2 transition-all text-sm ${
+                  showCustom
+                    ? 'border-emerald-500 bg-emerald-50'
+                    : 'border-gray-200 bg-white text-gray-500 hover:border-emerald-300 hover:bg-emerald-50/40'
+                }`}
+              >
+                <div className="flex items-start gap-3">
+                  <div className={`w-5 h-5 rounded-full border-2 flex-shrink-0 mt-0.5 flex items-center justify-center transition-colors ${
+                    showCustom ? 'border-emerald-500 bg-emerald-500' : 'border-gray-300'
+                  }`}>
+                    {showCustom && (
+                      <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                      </svg>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1.5 text-gray-500">
+                    <PenLine className="w-3.5 h-3.5" />
+                    <span className="font-medium">Write my own…</span>
+                  </div>
+                </div>
+              </button>
+            </div>
+
+            {/* Custom text area */}
+            {showCustom && (
+              <textarea
+                autoFocus
+                value={customText}
+                onChange={(e) => setCustomText(e.target.value)}
+                placeholder="I will… (describe your specific climate action)"
+                className="w-full h-28 p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent resize-none text-sm"
+              />
+            )}
+
+            {/* Actions */}
+            <div className="flex items-center justify-between pt-1">
+              <button
+                onClick={() => setNoteStep('prompt')}
+                className="text-gray-500 hover:text-gray-700 font-medium text-sm"
               >
                 Cancel
               </button>
               <button
-                type="submit"
-                disabled={loading || !noteText.trim()}
-                className="inline-flex items-center space-x-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-semibold px-4 sm:px-6 py-2.5 sm:py-3 rounded-lg transition-colors text-sm sm:text-base"
+                onClick={handleSubmitNote}
+                disabled={!canSubmit || noteStep === 'submitting'}
+                className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 text-white font-semibold px-5 py-2.5 rounded-lg transition-colors text-sm"
               >
-                {loading ? (
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                {noteStep === 'submitting' ? (
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                 ) : (
                   <Send className="w-4 h-4" />
                 )}
-                <span>Save My Note</span>
+                Save My Note
               </button>
             </div>
-          </form>
+          </div>
         )}
       </div>
     </div>
