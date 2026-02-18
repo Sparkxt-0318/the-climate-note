@@ -13,10 +13,10 @@ serve(async (req) => {
   try {
     const { article_title, article_subtitle, key_takeaways, article_content } = await req.json();
 
-    const openaiKey = Deno.env.get('OPENAI_API_KEY');
-    if (!openaiKey) {
+    const geminiKey = Deno.env.get('GEMINI_API_KEY');
+    if (!geminiKey) {
       return new Response(
-        JSON.stringify({ error: 'OpenAI API key not configured' }),
+        JSON.stringify({ error: 'Gemini API key not configured' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -31,7 +31,9 @@ serve(async (req) => {
       ? article_content.replace(/<[^>]*>/g, '').substring(0, 800)
       : '';
 
-    const prompt = `Article title: "${article_title}"
+    const prompt = `You are an environmental action coach for teenagers. You generate short, specific, realistic action ideas. Always respond with only a valid JSON array of exactly 3 strings.
+
+Article title: "${article_title}"
 ${article_subtitle ? `Subtitle: "${article_subtitle}"` : ''}
 ${takeawayText}
 ${contentSnippet ? `Article excerpt: ${contentSnippet}` : ''}
@@ -45,35 +47,33 @@ Based on this environmental article, generate exactly 3 specific, personal actio
 Return ONLY a valid JSON array of exactly 3 strings. No explanation, no markdown, just the JSON array.
 Example format: ["I will...", "I'll...", "I will..."]`;
 
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${openaiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        temperature: 0.8,
-        max_tokens: 200,
-        messages: [
-          {
-            role: 'system',
-            content: 'You are an environmental action coach for teenagers. You generate short, specific, realistic action ideas. Always respond with only a valid JSON array of exactly 3 strings.',
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: {
+            temperature: 0.8,
+            maxOutputTokens: 200,
           },
-          { role: 'user', content: prompt },
-        ],
-      }),
-    });
+        }),
+      }
+    );
 
     if (!response.ok) {
-      throw new Error(`OpenAI error: ${response.status}`);
+      throw new Error(`Gemini error: ${response.status}`);
     }
 
     const data = await response.json();
-    const raw = data.choices[0].message.content.trim();
+    const raw = data.candidates[0].content.parts[0].text.trim();
+
+    // Strip markdown code fences if present
+    const cleaned = raw.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```$/i, '').trim();
 
     // Parse and validate
-    const suggestions = JSON.parse(raw);
+    const suggestions = JSON.parse(cleaned);
     if (!Array.isArray(suggestions) || suggestions.length !== 3) {
       throw new Error('Invalid suggestions format');
     }

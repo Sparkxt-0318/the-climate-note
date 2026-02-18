@@ -65,8 +65,8 @@ const CATEGORY_DEFAULTS: Record<string, any> = {
 }
 
 // ─── STEP 1: AI EXTRACTS ACTION DETAILS ──────────────────────────────────────
-async function classifyWithAI(noteContent: string, openaiKey: string) {
-  const systemPrompt = `You are an environmental impact classifier. Analyze a user's climate action note and extract structured data.
+async function classifyWithAI(noteContent: string, geminiKey: string) {
+  const prompt = `You are an environmental impact classifier. Analyze a user's climate action note and extract structured data.
 
 CATEGORIES: transportation, food, waste, energy, water, shopping, other
 
@@ -93,33 +93,36 @@ Rules:
 - confidence: 0.0-1.0 (be conservative, only 0.9+ if very explicit)
 - quantity: numeric value extracted from note, null if not mentioned
 - unit: miles, km, kg, liters, hours, items, meals, minutes — null if not applicable
-- If vague or unclear, set confidence below 0.7`
+- If vague or unclear, set confidence below 0.7
 
-  const response = await fetch('https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${openaiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: 'gpt-4o-mini',
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: `Classify this climate action note: "${noteContent}"` }
-      ],
-      max_tokens: 200,
-      temperature: 0.1, // Low temperature = more consistent, less hallucination
-    }),
-  })
+Classify this climate action note: "${noteContent}"`
 
-  if (!response.ok) throw new Error(`OpenAI API error: ${response.status}`)
+  const response = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiKey}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: {
+          temperature: 0.1,
+          maxOutputTokens: 200,
+        },
+      }),
+    }
+  )
+
+  if (!response.ok) throw new Error(`Gemini API error: ${response.status}`)
 
   const data = await response.json()
-  const content = data.choices[0]?.message?.content?.trim()
-  if (!content) throw new Error('Empty response from OpenAI')
+  const raw = data.candidates[0]?.content?.parts[0]?.text?.trim()
+  if (!raw) throw new Error('Empty response from Gemini')
+
+  // Strip markdown code fences if present
+  const cleaned = raw.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```$/i, '').trim()
 
   // Parse and validate JSON
-  const parsed = JSON.parse(content)
+  const parsed = JSON.parse(cleaned)
   if (!parsed.category || !parsed.confidence) throw new Error('Invalid AI response format')
 
   return parsed
@@ -205,15 +208,15 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: 'Missing note_id, note_content, or user_id' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     }
 
-    const openaiKey = Deno.env.get('OPENAI_API_KEY')
-    if (!openaiKey) throw new Error('OPENAI_API_KEY not set')
+    const geminiKey = Deno.env.get('GEMINI_API_KEY')
+    if (!geminiKey) throw new Error('GEMINI_API_KEY not set')
 
     const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
 
     // Step 1: AI classifies the note
     let aiResult
     try {
-      aiResult = await classifyWithAI(note_content, openaiKey)
+      aiResult = await classifyWithAI(note_content, geminiKey)
     } catch (err) {
       // If AI fails, store as "other" with no impact
       aiResult = { category: 'other', action_type: 'general_action', quantity: null, unit: null, confidence: 0, reasoning: 'AI classification failed' }
