@@ -72,12 +72,20 @@ export default function ArticleView({ article, userProfile, onProfileUpdate }: A
       }
     } catch (err) {
       console.error('Failed to fetch suggestions:', err);
-      // Fallback: show generic suggestions based on article title
-      setSuggestions([
-        `I will research more about ${article.title.toLowerCase()} and share what I learn with a friend.`,
-        `I'll make one small change in my daily routine this week inspired by this article.`,
-        `I will track my progress on this environmental action for the next 7 days.`,
-      ]);
+      // Fallback: use key takeaways to generate specific suggestions
+      const takeaways = article.key_takeaways || [];
+      const fallback = takeaways.length >= 2
+        ? [
+            `I will tell at least one person in my life about this: "${takeaways[0]}"`,
+            `I'll look up one brand, product, or habit related to ${article.title} and make a more sustainable swap.`,
+            `I will make one concrete change inspired by this article and stick to it for the next month.`,
+          ]
+        : [
+            `I'll look up one specific product or habit related to ${article.title} and find a sustainable alternative.`,
+            `I will talk to someone at home about what I learned from this article and suggest one change we can make together.`,
+            `I'll find one thing in my daily routine connected to ${article.title} and commit to changing it this week.`,
+          ];
+      setSuggestions(fallback);
       setNoteStep('selecting');
     }
   };

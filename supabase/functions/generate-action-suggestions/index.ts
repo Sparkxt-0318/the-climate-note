@@ -31,21 +31,29 @@ serve(async (req) => {
       ? article_content.replace(/<[^>]*>/g, '').substring(0, 800)
       : '';
 
-    const prompt = `You are an environmental action coach for teenagers. You generate short, specific, realistic action ideas. Always respond with only a valid JSON array of exactly 3 strings.
+    const prompt = `You are an environmental action coach for teenagers. Generate exactly 3 personal action commitments based on this specific article.
 
 Article title: "${article_title}"
 ${article_subtitle ? `Subtitle: "${article_subtitle}"` : ''}
 ${takeawayText}
 ${contentSnippet ? `Article excerpt: ${contentSnippet}` : ''}
 
-Based on this environmental article, generate exactly 3 specific, personal action suggestions for a teenager. Each suggestion must:
-- Be one sentence
+Rules for each suggestion:
 - Start with "I will" or "I'll"
-- Be specific and realistic (something they can actually do this week)
-- Be directly related to the article topic
+- Be SPECIFIC to this article's topic — mention the actual issue (e.g. fast fashion, microplastics, food waste)
+- Be a concrete, real-world action (e.g. "I'll buy my next item of clothing secondhand instead of new" NOT "I'll make a change")
+- Be realistic for a teenager — something doable at home, school, or when shopping
+- Vary the suggestions: one small/immediate action, one medium effort, one bigger lifestyle shift
+- Do NOT use vague phrases like "research more", "make a change", "track progress", "be more aware"
+- Each action should name a specific behavior change
 
-Return ONLY a valid JSON array of exactly 3 strings. No explanation, no markdown, just the JSON array.
-Example format: ["I will...", "I'll...", "I will..."]`;
+Good examples for a fast fashion article:
+["I'll check a thrift store before buying new clothes next time I need something", "I will wash my synthetic clothes in a microplastic-catching laundry bag", "I'll go through my closet and donate clothes I haven't worn in 6 months instead of throwing them away"]
+
+Bad examples (too vague — never do this):
+["I will research more about fast fashion", "I'll make one small change in my daily routine", "I will track my progress for 7 days"]
+
+Return ONLY a valid JSON array of exactly 3 strings. No explanation, no markdown.`;
 
     const response = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiKey}`,
