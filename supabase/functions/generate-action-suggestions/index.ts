@@ -1,5 +1,6 @@
 // Edge Function: Generate Action Suggestions
 // Auto-deploys via GitHub Actions when changes are pushed
+// Version: 1.0.1
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 
 const corsHeaders = {
