@@ -8,6 +8,7 @@ export interface Article {
   reading_time: number;
   is_published: boolean;
   key_takeaways?: string[];
+  key_statistics?: string[];
   created_at: string;
   updated_at: string;
 }

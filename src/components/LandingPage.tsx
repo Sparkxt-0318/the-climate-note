@@ -118,7 +118,7 @@ export default function LandingPage() {
 
         {/* Main Content */}
         <div className="space-y-6">
-          <div className="space-y-2">
+          <div className="space-y-3">
             <h2 className="text-3xl font-bold text-gray-900 leading-tight">
               {showForgotPassword ? (
                 <>
@@ -126,15 +126,30 @@ export default function LandingPage() {
                 </>
               ) : (
                 <>
-                  Daily climate action,
-                  <span className="text-emerald-600"> one note at a time</span>
+                  {isLogin ? (
+                    <>Welcome back to your climate journey</>
+                  ) : (
+                    <>
+                      Daily climate action,
+                      <span className="text-emerald-600"> delivered to your inbox</span>
+                    </>
+                  )}
                 </>
               )}
             </h2>
             {!showForgotPassword && (
-              <p className="text-gray-600 text-lg">
-                Discover untold environmental stories and turn reading into action through personalized sustainability notes.
-              </p>
+              <>
+                <p className="text-emerald-700 font-semibold text-lg italic">
+                  Environmental issues and solutions — written by the youth, for the youth
+                </p>
+                <p className="text-gray-600 text-base">
+                  {isLogin ? (
+                    "Continue your journey of climate action and environmental impact."
+                  ) : (
+                    "Join our newsletter to discover untold environmental stories and turn reading into action through personalized sustainability notes."
+                  )}
+                </p>
+              </>
             )}
           </div>
 
@@ -271,11 +286,11 @@ export default function LandingPage() {
               ) : (
                 <>
                   <span>
-                    {showForgotPassword 
-                      ? 'Send Reset Email' 
-                      : isLogin 
-                        ? 'Log In' 
-                        : 'Join The Movement'
+                    {showForgotPassword
+                      ? 'Send Reset Email'
+                      : isLogin
+                        ? 'Log In'
+                        : 'Sign Up to Our Newsletter'
                     }
                   </span>
                   <ArrowRight className="w-5 h-5" />
@@ -291,9 +306,10 @@ export default function LandingPage() {
               </p>
             ) : !isLogin ? (
               <>
-                <p>✅ Daily environmental insights delivered to your inbox</p>
+                <p>✅ Free daily climate newsletter with youth perspectives</p>
                 <p>✅ Track your climate action with personal notes</p>
                 <p>✅ Join a community of young environmental champions</p>
+                <p>✅ Turn reading into real environmental impact</p>
               </>
             ) : (
               <p className="text-gray-600">Welcome back! Enter your credentials to continue your climate journey.</p>

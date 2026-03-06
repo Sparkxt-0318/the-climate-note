@@ -225,6 +225,25 @@ export default function ArticleView({ article, userProfile, onProfileUpdate }: A
         </div>
       )}
 
+      {/* Key Statistics */}
+      {article.key_statistics && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 sm:p-6 mb-6 sm:mb-8">
+          <div className="flex items-center space-x-2 mb-4">
+            <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
+            <h3 className="font-semibold text-sm sm:text-base text-blue-800">By the Numbers</h3>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {article.key_statistics.map((stat, index) => (
+              <div key={index} className="bg-white border border-blue-100 rounded-lg p-4 shadow-sm">
+                <p className="text-sm sm:text-base text-blue-900 leading-relaxed font-medium">
+                  {stat}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Note Card Generator Modal */}
       {showShareCard && savedNote && userProfile && (
         <NoteCardGenerator
