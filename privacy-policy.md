@@ -1,6 +1,6 @@
 # Privacy Policy for The Climate Note
 
-**Effective Date:** January 15, 2025
+**Effective Date:** March 22, 2026
 
 ## Introduction
 
@@ -10,8 +10,10 @@ The Climate Note ("we," "our," or "us") is committed to protecting your privacy.
 
 ### Personal Information
 - **Email Address**: Used for account creation and authentication
+- **Display Name**: Optional name shown to other users in community features
 - **User-Generated Content**: Your personal climate action notes and profile information
 - **Usage Data**: How you interact with articles and features
+- **Streak Data**: Your daily reading and note-taking activity
 
 ### Automatically Collected Information
 - **Device Information**: Device type, operating system, app version
@@ -30,10 +32,10 @@ We use your information to:
 
 ## Information Sharing
 
-We do not sell, trade, or rent your personal information. We may share information in these limited circumstances:
-- **Community Features**: Your action notes may be visible to other users (email addresses are anonymized)
-- **Service Providers**: Third-party services that help us operate our app (Supabase for data storage)
-- **Legal Requirements**: When required by law or to protect our rights
+We do not sell, trade, or rent your personal information to third parties. We may share information in these limited circumstances:
+- **Community Features**: Your display name and action notes may be visible to other users when you choose to share them. Email addresses are never shown publicly.
+- **Service Providers**: We use Supabase (secure cloud database) to store and manage your data
+- **Legal Requirements**: When required by law or to protect our rights and safety
 
 ## Data Security
 
@@ -70,12 +72,21 @@ Your information may be transferred to and processed in countries other than you
 
 We may update this Privacy Policy periodically. We will notify you of significant changes through the app or email.
 
+## Third-Party Services
+
+We use the following third-party services:
+- **Supabase**: Database and authentication services (https://supabase.com/privacy)
+- **Vercel**: Web hosting and deployment (https://vercel.com/legal/privacy-policy)
+
+These services have their own privacy policies and terms of service.
+
 ## Contact Us
 
-If you have questions about this Privacy Policy, contact us at:
-- Email: privacy@theclimatenote.com
-- Website: https://theclimatenote.bolt.host
+If you have questions about this Privacy Policy, please contact us at:
+- **Email**: support@theclimatenote.app
+
+For data deletion requests or to exercise your privacy rights, email us at: privacy@theclimatenote.app
 
 ---
 
-*This privacy policy was last updated on January 15, 2025.*
+*This privacy policy was last updated on March 22, 2026.*
