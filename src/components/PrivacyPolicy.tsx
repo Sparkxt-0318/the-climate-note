@@ -122,7 +122,7 @@ export default function PrivacyPolicy() {
 
             <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4 mt-8">
               <p className="text-emerald-800 text-sm">
-                <strong>This privacy policy was last updated on January 15, 2025.</strong>
+                <strong>This privacy policy was last updated on March 24, 2026.</strong>
               </p>
             </div>
           </div>
