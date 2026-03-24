@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="1024" height="1024" fill="#F5F5F0"/>
+
+  <!-- Notebook icon - centered and larger -->
+  <g transform="translate(512, 512)">
+    <!-- Spiral binding -->
+    <rect x="-180" y="-200" width="20" height="400" fill="#6B8E7F" rx="3"/>
+    <circle cx="-170" cy="-150" r="8" fill="none" stroke="#F5F5F0" stroke-width="3"/>
+    <circle cx="-170" cy="-90" r="8" fill="none" stroke="#F5F5F0" stroke-width="3"/>
+    <circle cx="-170" cy="-30" r="8" fill="none" stroke="#F5F5F0" stroke-width="3"/>
+    <circle cx="-170" cy="30" r="8" fill="none" stroke="#F5F5F0" stroke-width="3"/>
+    <circle cx="-170" cy="90" r="8" fill="none" stroke="#F5F5F0" stroke-width="3"/>
+    <circle cx="-170" cy="150" r="8" fill="none" stroke="#F5F5F0" stroke-width="3"/>
+
+    <!-- Back page (darker green) -->
+    <rect x="-140" y="-180" width="280" height="360" fill="#7FA896" rx="8"/>
+
+    <!-- Middle page -->
+    <rect x="-120" y="-160" width="280" height="360" fill="#8FB9A8" rx="8"/>
+
+    <!-- Front page (lightest green) with lines -->
+    <rect x="-100" y="-140" width="280" height="360" fill="#A8CCBD" rx="8"/>
+
+    <!-- Notebook lines -->
+    <line x1="-70" y1="-80" x2="150" y2="-80" stroke="#7FA896" stroke-width="3" opacity="0.6"/>
+    <line x1="-70" y1="-30" x2="150" y2="-30" stroke="#7FA896" stroke-width="3" opacity="0.6"/>
+    <line x1="-70" y1="20" x2="150" y2="20" stroke="#7FA896" stroke-width="3" opacity="0.6"/>
+    <line x1="-70" y1="70" x2="150" y2="70" stroke="#7FA896" stroke-width="3" opacity="0.6"/>
+    <line x1="-70" y1="120" x2="150" y2="120" stroke="#7FA896" stroke-width="3" opacity="0.6"/>
+  </g>
+</svg>
