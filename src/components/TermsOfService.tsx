@@ -146,8 +146,8 @@ export default function TermsOfService() {
             <h2 className="text-2xl font-bold text-gray-900 mb-4 mt-8">Contact Information</h2>
             <p>If you have questions about these Terms of Service, contact us at:</p>
             <ul className="space-y-2">
-              <li><strong>Email:</strong> legal@theclimatenote.com</li>
-              <li><strong>Website:</strong> https://theclimatenote.bolt.host</li>
+              <li><strong>Email:</strong> theclimatenote@gmail.com</li>
+              <li><strong>Website:</strong> https://the-climate-note.vercel.app/</li>
             </ul>
 
             <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4 mt-8">
