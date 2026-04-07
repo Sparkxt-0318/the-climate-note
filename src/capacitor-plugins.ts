@@ -2,6 +2,8 @@ import { Capacitor } from '@capacitor/core';
 import { PushNotifications } from '@capacitor/push-notifications';
 import { LocalNotifications } from '@capacitor/local-notifications';
 import { App } from '@capacitor/app';
+import { Browser } from '@capacitor/browser';
+import { supabase } from './lib/supabase';
 
 export class CapacitorNotifications {
   static async initialize() {
@@ -110,9 +112,47 @@ export class CapacitorApp {
       }
     });
 
-    App.addListener('appUrlOpen', (event) => {
+    App.addListener('appUrlOpen', async (event) => {
       console.log('App opened with URL:', event.url);
-      // Handle deep links here
+
+      // Handle OAuth callback deep links
+      // The URL will contain access_token / refresh_token after OAuth sign-in
+      const url = new URL(event.url);
+
+      // Check for OAuth callback with tokens in the hash fragment or query params
+      if (url.hash || url.searchParams.has('code') || url.searchParams.has('access_token')) {
+        // Close the in-app browser that was opened for OAuth
+        try {
+          await Browser.close();
+        } catch {
+          // Browser may already be closed
+        }
+
+        // Extract tokens from hash fragment (Supabase implicit grant flow)
+        if (url.hash) {
+          const hashParams = new URLSearchParams(url.hash.substring(1));
+          const accessToken = hashParams.get('access_token');
+          const refreshToken = hashParams.get('refresh_token');
+
+          if (accessToken && refreshToken) {
+            await supabase.auth.setSession({
+              access_token: accessToken,
+              refresh_token: refreshToken,
+            });
+          }
+        }
+
+        // Handle PKCE flow with authorization code
+        if (url.searchParams.has('code')) {
+          const code = url.searchParams.get('code')!;
+          await supabase.auth.exchangeCodeForSession(code);
+        }
+      }
+
+      // Handle password reset deep links
+      if (event.url.includes('type=recovery') || event.url.includes('/reset-password')) {
+        window.location.hash = '#/reset-password';
+      }
     });
   }
 }

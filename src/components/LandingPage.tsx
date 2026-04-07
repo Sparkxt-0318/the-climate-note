@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Mail, NotebookPen, ArrowRight, Lock } from 'lucide-react';
+import { Capacitor } from '@capacitor/core';
 import { supabase } from '../lib/supabase';
 import { showToast } from './ui/Toast';
 
@@ -31,14 +32,37 @@ export default function LandingPage() {
   const handleSocialAuth = async (provider: 'google' | 'apple') => {
     setLoading(true);
     try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider,
-        options: {
-          redirectTo: import.meta.env.VITE_APP_URL || window.location.origin,
-        },
-      });
+      if (Capacitor.isNativePlatform()) {
+        // On native iOS/Android, use in-app browser (SFSafariViewController)
+        // to comply with App Store guideline 4 (no external browser for auth)
+        const { data, error } = await supabase.auth.signInWithOAuth({
+          provider,
+          options: {
+            redirectTo: import.meta.env.VITE_APP_URL || window.location.origin,
+            skipBrowserRedirect: true,
+          },
+        });
 
-      if (error) throw error;
+        if (error) throw error;
+
+        if (data?.url) {
+          const { Browser } = await import('@capacitor/browser');
+          await Browser.open({
+            url: data.url,
+            presentationStyle: 'popover',
+          });
+        }
+      } else {
+        // On web, use default Supabase redirect behavior
+        const { error } = await supabase.auth.signInWithOAuth({
+          provider,
+          options: {
+            redirectTo: import.meta.env.VITE_APP_URL || window.location.origin,
+          },
+        });
+
+        if (error) throw error;
+      }
       // User will be redirected to provider, then back to app
     } catch (error: any) {
       console.error(`${provider} auth error:`, error);

@@ -255,6 +255,10 @@ export default function Dashboard({ session }: DashboardProps) {
             setUserProfile(updated);
             setShowProfileSettings(false);
           }}
+          onAccountDeleted={() => {
+            setShowProfileSettings(false);
+            supabase.auth.signOut();
+          }}
         />
       )}
 
