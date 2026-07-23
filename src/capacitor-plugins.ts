@@ -9,7 +9,29 @@ let notificationListenersRegistered = false;
 let appListenersRegistered = false;
 
 export class CapacitorNotifications {
-  static async initialize() {
+  /** Check current permission without prompting the user. */
+  static async checkPermissions(): Promise<boolean> {
+    if (!Capacitor.isNativePlatform()) {
+      return false;
+    }
+
+    try {
+      const status = await LocalNotifications.checkPermissions();
+      if (status.display === 'granted') {
+        await this.setupNotificationListeners();
+        return true;
+      }
+      return false;
+    } catch (error) {
+      if (import.meta.env.DEV) {
+        console.error('Error checking local notification permissions:', error);
+      }
+      return false;
+    }
+  }
+
+  /** Request permission (call only from an explicit user opt-in). */
+  static async requestPermissions(): Promise<boolean> {
     if (!Capacitor.isNativePlatform()) {
       return false;
     }
@@ -23,10 +45,15 @@ export class CapacitorNotifications {
       return false;
     } catch (error) {
       if (import.meta.env.DEV) {
-        console.error('Error initializing local notifications:', error);
+        console.error('Error requesting local notification permissions:', error);
       }
       return false;
     }
+  }
+
+  /** @deprecated Prefer checkPermissions / requestPermissions. */
+  static async initialize() {
+    return this.requestPermissions();
   }
 
   static async setupNotificationListeners() {

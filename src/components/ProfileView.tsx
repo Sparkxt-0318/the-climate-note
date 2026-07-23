@@ -20,8 +20,11 @@ import { openLegalPage, openSupportEmail, LEGAL } from '../lib/legalLinks';
 
 interface ProfileViewProps {
   userProfile: UserProfile | null;
+  profileError?: string | null;
+  sessionEmail?: string | null;
   isAdmin: boolean;
   isWriter: boolean;
+  onRetryProfile?: () => void;
   onEditProfile: () => void;
   onNotifications: () => void;
   onGoals: () => void;
@@ -35,8 +38,11 @@ interface ProfileViewProps {
 
 export default function ProfileView({
   userProfile,
+  profileError = null,
+  sessionEmail = null,
   isAdmin,
   isWriter,
+  onRetryProfile,
   onEditProfile,
   onNotifications,
   onGoals,
@@ -47,7 +53,67 @@ export default function ProfileView({
   onSignOut,
   onDeleteAccount,
 }: ProfileViewProps) {
-  if (!userProfile) return null;
+  if (!userProfile) {
+    return (
+      <div className="app-screen space-y-5">
+        <div className="app-card p-8 text-center space-y-4">
+          <h2 className="text-lg font-bold text-ink">Profile unavailable</h2>
+          <p className="text-sm text-ink-muted leading-relaxed">
+            {profileError || 'We could not load your profile. Check your connection and try again.'}
+          </p>
+          {sessionEmail ? (
+            <p className="text-xs text-ink-soft truncate">{sessionEmail}</p>
+          ) : null}
+          {onRetryProfile ? (
+            <button
+              type="button"
+              onClick={onRetryProfile}
+              className="w-full py-3 rounded-2xl bg-forest text-cream font-semibold text-sm"
+            >
+              Retry
+            </button>
+          ) : null}
+        </div>
+
+        <div className="app-card overflow-hidden">
+          <button
+            type="button"
+            onClick={onNotifications}
+            className="w-full flex items-center gap-3 px-4 py-4 transition-colors border-b border-sage-100/80 hover:bg-mist"
+          >
+            <div className="w-9 h-9 rounded-xl bg-sage-100 flex items-center justify-center">
+              <Bell className="w-4 h-4 text-sage-600" strokeWidth={2} />
+            </div>
+            <span className="flex-1 text-left font-semibold text-ink text-sm">Notifications</span>
+            <ChevronRight className="w-4 h-4 text-sage-300 shrink-0" />
+          </button>
+          <button
+            type="button"
+            onClick={onDeleteAccount}
+            className="w-full flex items-center gap-3 px-4 py-4 transition-colors hover:bg-red-50"
+          >
+            <div className="w-9 h-9 rounded-xl bg-red-50 flex items-center justify-center">
+              <Trash2 className="w-4 h-4 text-red-600" strokeWidth={2} />
+            </div>
+            <div className="flex-1 text-left min-w-0">
+              <span className="block font-semibold text-sm text-red-600">Delete account</span>
+              <span className="block text-xs mt-0.5 text-red-500/80">Permanently remove your account</span>
+            </div>
+            <ChevronRight className="w-4 h-4 text-red-300 shrink-0" />
+          </button>
+        </div>
+
+        <button
+          type="button"
+          onClick={onSignOut}
+          className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl border border-sage-200 text-ink-soft font-semibold text-sm hover:bg-mist transition-colors app-card"
+        >
+          <LogOut className="w-4 h-4" />
+          Sign out
+        </button>
+      </div>
+    );
+  }
 
   const mastery = getMasteryLevel(userProfile.total_notes);
   const memberSince = new Date(userProfile.created_at).toLocaleDateString('en-US', {

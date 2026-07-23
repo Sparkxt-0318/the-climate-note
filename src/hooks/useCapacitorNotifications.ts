@@ -16,11 +16,12 @@ export function useCapacitorNotifications() {
   });
 
   useEffect(() => {
-    const initializeCapacitor = async () => {
+    const checkOnly = async () => {
       const isNative = Capacitor.isNativePlatform();
 
       if (isNative) {
-        const permissionsGranted = await CapacitorNotifications.initialize();
+        // Check status only — never prompt until the user opts in.
+        const permissionsGranted = await CapacitorNotifications.checkPermissions();
         setSettings({
           isNative: true,
           permissionsGranted,
@@ -35,11 +36,11 @@ export function useCapacitorNotifications() {
       }
     };
 
-    void initializeCapacitor();
+    void checkOnly();
   }, []);
 
   const requestPermissions = async (): Promise<boolean> => {
-    const granted = await CapacitorNotifications.initialize();
+    const granted = await CapacitorNotifications.requestPermissions();
     setSettings((prev) => ({
       ...prev,
       permissionsGranted: granted,
@@ -49,7 +50,18 @@ export function useCapacitorNotifications() {
   };
 
   const scheduleReminder = async (time: string) => {
-    if (!settings.canSchedule) {
+    let canSchedule = settings.canSchedule;
+    if (!canSchedule && Capacitor.isNativePlatform()) {
+      canSchedule = await CapacitorNotifications.checkPermissions();
+      if (canSchedule) {
+        setSettings((prev) => ({
+          ...prev,
+          permissionsGranted: true,
+          canSchedule: true,
+        }));
+      }
+    }
+    if (!canSchedule) {
       return false;
     }
     return CapacitorNotifications.scheduleDailyReminder(time);

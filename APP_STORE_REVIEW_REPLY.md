@@ -7,15 +7,24 @@ Use this when replying to rejection **Submission ID: 4cecb7f8-96bd-4617-a918-42c
 ## What we fixed in the new build
 
 ### Guideline 4 — Sign in inside the app
-- **Sign in with Apple** uses the native iOS sheet (no Safari).
-- **Google sign-in** uses Capacitor’s in-app browser (`SFSafariViewController`), not the external Safari app.
-- **Email/password** sign-up and log-in are fully in-app.
+- **Email/password** sign-up and log-in are completed entirely within the app UI (no browser).
+- **Sign in with Apple** uses the native iOS authorization sheet (`ASAuthorizationController`) — no Safari.
+- **Google sign-in** uses the **Safari View Controller API** (`SFSafariViewController` via Capacitor Browser) so users stay inside the app and can verify the URL / SSL certificate. They are **not** sent to the external Safari app.
 - **Privacy & Terms** during sign-up open in-app screens, not Safari.
+
+### Guideline 2.1(a) — Demo account infinite loading
+- Auth and Dashboard network calls now use **timeouts** so the UI cannot spin forever.
+- Native splash hides immediately after shell init (does not wait on network).
+- After sign-in, Home loads today’s published article, or **falls back to the latest published article** if today is missing.
+- Loading spinners always clear (success, error, or timeout); Home/Archive show **Retry** on load errors.
+- New users get a `user_profiles` row via a database trigger (plus client backup).
+- Profile tab never blanks: shows retry + Delete account even if profile load fails.
 
 ### Guideline 5.1.1(v) — Account deletion
 - **Profile tab → Delete account** (menu item)
 - **Profile tab → Danger zone → Delete account** (secondary entry)
 - **Profile & account modal → Delete account…**
+- Delete remains available even if profile stats fail to load (uses session email).
 - Flow: tap Delete account → type `DELETE` → confirm → account and data removed via server.
 
 ---
@@ -23,25 +32,24 @@ Use this when replying to rejection **Submission ID: 4cecb7f8-96bd-4617-a918-42c
 ## Paste into App Store Connect → Reply to App Review
 
 ```
-Thank you for the feedback. We have updated build [NEW BUILD NUMBER] to address both items:
+Thank you for the feedback. We have updated build 3 to address both items:
 
 Guideline 4 — Sign in / registration:
-• Sign in with Apple uses the native iOS authorization sheet (ASAuthorizationController).
-• Google sign-in uses an in-app SFSafariViewController sheet via our Capacitor integration — users are not sent to the external Safari app.
 • Email and password registration and login are completed entirely within the app UI.
+• Sign in with Apple uses the native iOS authorization sheet (ASAuthorizationController).
+• Google sign-in uses the Safari View Controller API (SFSafariViewController) so authentication stays inside the app. Users are not taken to the external Safari app.
 • Legal links on the sign-up screen open in-app policy screens.
+
+Guideline 2.1(a) — Demo account loading:
+• We fixed indefinite loading after demo credentials by adding request timeouts and ensuring the Home screen always finishes loading.
+• If today’s article is unavailable, the app falls back to the latest published article so reviewers are not left on a spinner.
 
 Guideline 5.1.1(v) — Account deletion:
 • Signed-in users can delete their account from Profile → "Delete account" (also under Danger zone).
 • Deletion is permanent (not deactivation). Users type DELETE to confirm.
 • Our backend edge function removes user notes, goals, profile, and the auth user.
 
-We have attached a screen recording on a physical iPhone demonstrating:
-1) Sign in with the demo account
-2) Profile → Delete account
-3) Full deletion confirmation flow
-
-Demo account:
+Demo account (email/password):
 Email: [YOUR_DEMO_EMAIL]
 Password: [YOUR_DEMO_PASSWORD]
 ```
@@ -52,12 +60,13 @@ Password: [YOUR_DEMO_PASSWORD]
 
 Record **2–3 minutes** showing:
 
-1. Launch app → Get started → sign in (demo account or Apple)
-2. Land on Home with today’s article
-3. **Profile** tab (bottom nav)
-4. Tap **Delete account** in the menu (red row)
-5. Show confirmation screen — type `DELETE`
-6. Tap **Permanently delete account** (use a throwaway test account if needed)
+1. Launch app → Get started → sign in with **demo email/password**
+2. (Optional) Continue with Google → confirm **in-app Safari View Controller sheet**, not external Safari
+3. Land on Home with an article (not an infinite spinner)
+4. **Profile** tab (bottom nav)
+5. Tap **Delete account** in the menu (red row)
+6. Show confirmation screen — type `DELETE`
+7. Tap **Permanently delete account** (use a throwaway test account if needed)
 
 Upload the video to **App Store Connect → App Review Information → Notes** (or attach in your reply).
 
@@ -74,9 +83,15 @@ Upload the video to **App Store Connect → App Review Information → Notes** (
    - Secret `SUPABASE_PROJECT_REF` = `noefayakyrmmknqlcklf`
    - Must include **`delete-account`**
 
-3. **Publish today’s article** — Home must not show “No article for today”
+3. **Publish today’s article** (or any published article) — Home falls back to latest if today is missing
 
-4. **Demo account** for reviewers (email/password, with streak + at least one note)
+4. **Demo account** for reviewers (put real credentials only in App Store Connect — not in this repo):
+   - Email/password account that is **confirmed** (can sign in)
+   - Row exists in `user_profiles` (migration `20260717000000_auto_create_user_profile` backfills missing rows)
+   - Pre-seed: at least one note + visible streak so Home/Profile look complete
+   - Test on a physical iPhone: cold launch → demo login → Home within a few seconds (no infinite spinner)
+
+5. **Apply migration** `20260717000000_auto_create_user_profile.sql` to production Supabase before review
 
 ---
 
@@ -84,16 +99,16 @@ Upload the video to **App Store Connect → App Review Information → Notes** (
 
 1. `.env` with `VITE_SUPABASE_URL` + `VITE_SUPABASE_ANON_KEY`
 2. `npm run build:prod` → `npx cap sync ios` → `pod install` in `ios/App`
-3. Xcode: **build number 2** (already set in project) → Archive → Upload
+3. Xcode: **build number 3** → Archive → Upload
 4. Never ship if launch shows Connection Error or Demo Mode
 
 ---
 
 ## Device QA (physical iPhone)
 
-- [ ] Cold launch → today’s article (demo account)
+- [ ] Cold launch → demo email/password → Home with article within a few seconds
+- [ ] Sign in with Google — **SFSafariViewController sheet only**, not external Safari
 - [ ] Sign in with Apple — native sheet, no Safari app
-- [ ] Sign in with Google — in-app sheet only
 - [ ] Email sign-up / login in-app
 - [ ] Profile → Delete account → type DELETE → success (throwaway account)
 - [ ] No “Supabase env vars” text if AI fails
@@ -103,7 +118,7 @@ Upload the video to **App Store Connect → App Review Information → Notes** (
 
 ## App Store Connect resubmission
 
-1. Select **build 2** (or latest uploaded build)
+1. Select **build 3** (or latest uploaded build)
 2. Reply to rejection (template above)
 3. **App Review Information:** demo credentials + screen recording
 4. **App Privacy:** email, name, user content; Gemini AI processing; **no tracking**
@@ -116,6 +131,7 @@ Upload the video to **App Store Connect → App Review Information → Notes** (
 ## Before you resubmit (quick)
 
 1. `npm run build:prod` with real `.env`
-2. `npm run ios:build` on Mac → Archive → upload new build
-3. Test Google + Apple sign-in on device — no external Safari
-4. Test delete account with throwaway email account
+2. `npm run ios:build` on Mac → Archive → upload **build 3**
+3. Test Google sign-in on device — must open in-app Safari View Controller, not Safari.app
+4. Test demo login — no infinite spinner
+5. Test delete account with throwaway email account

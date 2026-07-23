@@ -1,3 +1,5 @@
+import { withTimeout } from './withTimeout';
+
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
@@ -19,12 +21,16 @@ export async function getSupabaseConfigError(): Promise<string | null> {
   const keyDescription = describeApiKey(supabaseAnonKey);
 
   try {
-    const response = await fetch(`${supabaseUrl}/auth/v1/settings`, {
-      headers: {
-        apikey: supabaseAnonKey,
-        Authorization: `Bearer ${supabaseAnonKey}`,
-      },
-    });
+    const response = await withTimeout(
+      fetch(`${supabaseUrl}/auth/v1/settings`, {
+        headers: {
+          apikey: supabaseAnonKey,
+          Authorization: `Bearer ${supabaseAnonKey}`,
+        },
+      }),
+      12_000,
+      'Could not reach Supabase. Check your internet connection and try again.',
+    );
 
     if (response.status === 401) {
       return [
@@ -39,7 +45,10 @@ export async function getSupabaseConfigError(): Promise<string | null> {
     if (!response.ok) {
       return `Could not connect to Supabase (${response.status}). Check VITE_SUPABASE_URL in .env`;
     }
-  } catch {
+  } catch (error) {
+    if (error instanceof Error && error.name === 'TimeoutError') {
+      return error.message;
+    }
     return 'Could not reach Supabase. Check your internet connection and VITE_SUPABASE_URL in .env';
   }
 

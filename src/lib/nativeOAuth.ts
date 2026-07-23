@@ -13,8 +13,9 @@ function registerBrowserListeners() {
 }
 
 /**
- * Opens OAuth in an in-app browser sheet (SFSafariViewController on iOS).
- * Never uses the system Safari app — required for App Store Guideline 4.
+ * Opens OAuth with Safari View Controller (SFSafariViewController) on iOS
+ * via @capacitor/browser — never the external Safari app.
+ * Required for App Store Guideline 4.
  */
 export async function openInAppOAuth(oauthUrl: string): Promise<void> {
   if (!Capacitor.isNativePlatform()) {
@@ -30,9 +31,10 @@ export async function openInAppOAuth(oauthUrl: string): Promise<void> {
     // No browser open yet
   }
 
+  // Capacitor Browser on iOS presents SFSafariViewController (Safari View Controller API).
   await Browser.open({
     url: oauthUrl,
-    presentationStyle: 'popover',
+    presentationStyle: 'fullscreen',
     toolbarColor: '#eef2ec',
   });
 }

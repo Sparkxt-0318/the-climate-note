@@ -27,6 +27,7 @@ import { defaultDisplayNameForUser } from '../lib/publicProfile';
 import { scrollAppToTop } from '../lib/scrollToTop';
 import { useScrollToTop } from '../hooks/useScrollToTop';
 import BotanicalBackground from './layout/BotanicalBackground';
+import { withTimeout } from '../lib/withTimeout';
 
 interface DashboardProps {
   session: Session;
@@ -40,6 +41,8 @@ export default function Dashboard({ session }: DashboardProps) {
   const [todayArticle, setTodayArticle] = useState<Article | null>(null);
   const [selectedArchiveArticle, setSelectedArchiveArticle] = useState<Article | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [profileError, setProfileError] = useState<string | null>(null);
+  const [articleLoadError, setArticleLoadError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [showTutorial, setShowTutorial] = useState(false);
   const [showNotificationSettings, setShowNotificationSettings] = useState(false);
@@ -85,80 +88,120 @@ export default function Dashboard({ session }: DashboardProps) {
   }, [session]);
 
   const loadUserProfile = async () => {
+    setProfileError(null);
     try {
-      const { data, error } = await supabase
-        .from('user_profiles')
-        .select('*')
-        .eq('id', session.user.id)
-        .maybeSingle();
-
-      if (error && error.code !== 'PGRST116') throw error;
-
-      if (data) {
-        const profile = await loadFreshUserProfile(session.user.id);
-        setUserProfile(profile);
-      } else {
-        try {
-          const defaultDisplayName = defaultDisplayNameForUser(session.user);
-          const { data: newProfile, error: createError } = await supabase
+      await withTimeout(
+        (async () => {
+          const { data, error } = await supabase
             .from('user_profiles')
-            .insert({
-              id: session.user.id,
-              email: session.user.email,
-              ...(defaultDisplayName ? { display_name: defaultDisplayName } : {}),
-              streak: 0,
-              total_notes: 0,
-            })
-            .select()
-            .single();
+            .select('*')
+            .eq('id', session.user.id)
+            .maybeSingle();
 
-          if (createError) throw createError;
-          setUserProfile(newProfile);
-          // Tutorial disabled until aligned with current 5-tab shell (App Store readiness).
-        } catch (createError: unknown) {
-          const pgError = createError as { code?: string };
-          if (pgError.code === '23505') {
-            const { error: retryError } = await supabase
-              .from('user_profiles')
-              .select('*')
-              .eq('id', session.user.id)
-              .single();
+          if (error && error.code !== 'PGRST116') throw error;
 
-            if (retryError) throw retryError;
+          if (data) {
             const profile = await loadFreshUserProfile(session.user.id);
             setUserProfile(profile);
-            if (profile.total_notes === 0) {
-              /* tutorial deferred */
-            }
           } else {
-            throw createError;
+            try {
+              const defaultDisplayName = defaultDisplayNameForUser(session.user);
+              const { data: newProfile, error: createError } = await supabase
+                .from('user_profiles')
+                .insert({
+                  id: session.user.id,
+                  email: session.user.email,
+                  ...(defaultDisplayName ? { display_name: defaultDisplayName } : {}),
+                  streak: 0,
+                  total_notes: 0,
+                })
+                .select()
+                .single();
+
+              if (createError) throw createError;
+              setUserProfile(newProfile);
+              // Tutorial disabled until aligned with current 5-tab shell (App Store readiness).
+            } catch (createError: unknown) {
+              const pgError = createError as { code?: string };
+              if (pgError.code === '23505') {
+                const { error: retryError } = await supabase
+                  .from('user_profiles')
+                  .select('*')
+                  .eq('id', session.user.id)
+                  .single();
+
+                if (retryError) throw retryError;
+                const profile = await loadFreshUserProfile(session.user.id);
+                setUserProfile(profile);
+                if (profile.total_notes === 0) {
+                  /* tutorial deferred */
+                }
+              } else {
+                throw createError;
+              }
+            }
           }
-        }
-      }
+        })(),
+        15_000,
+        'Loading your profile timed out. Please try again.',
+      );
     } catch (error) {
       console.error('Error loading user profile:', error);
-      showToast('Failed to load your profile', 'error');
+      const message =
+        error instanceof Error ? error.message : 'Failed to load your profile';
+      setProfileError(message);
+      showToast(message, 'error');
     }
   };
 
   const loadTodayArticle = async () => {
+    setArticleLoadError(null);
     try {
       const today = getAppToday();
-      const { data, error } = await supabase
-        .from('articles')
-        .select('*')
-        .eq('published_date', today)
-        .eq('is_published', true)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
+      const { data, error } = await withTimeout(
+        supabase
+          .from('articles')
+          .select('*')
+          .eq('published_date', today)
+          .eq('is_published', true)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle(),
+        15_000,
+        'Loading today\'s article timed out. Please try again.',
+      );
 
       if (error && error.code !== 'PGRST116') throw error;
-      setTodayArticle(data);
-      setLoading(false);
+
+      if (data) {
+        setTodayArticle(data);
+        return;
+      }
+
+      // Fallback so Home is never empty when today has no published article.
+      const { data: latest, error: latestError } = await withTimeout(
+        supabase
+          .from('articles')
+          .select('*')
+          .eq('is_published', true)
+          .order('published_date', { ascending: false })
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle(),
+        15_000,
+        'Loading articles timed out. Please try again.',
+      );
+
+      if (latestError && latestError.code !== 'PGRST116') throw latestError;
+      setTodayArticle(latest);
     } catch (error) {
       console.error('Error loading today\'s article:', error);
-      showToast('Failed to load today\'s article', 'error');
+      const message =
+        error instanceof Error ? error.message : 'Failed to load today\'s article';
+      setArticleLoadError(message);
+      showToast(message, 'error');
+      setTodayArticle(null);
+    } finally {
       setLoading(false);
     }
   };
@@ -205,6 +248,11 @@ export default function Dashboard({ session }: DashboardProps) {
         {currentTab === 'home' && (
           <HomeView
             article={todayArticle}
+            articleLoadError={articleLoadError}
+            onRetryArticle={() => {
+              setLoading(true);
+              void loadTodayArticle();
+            }}
             userProfile={userProfile}
             onProfileUpdate={setUserProfile}
           />
@@ -258,8 +306,11 @@ export default function Dashboard({ session }: DashboardProps) {
         {currentTab === 'profile' && (
           <ProfileView
             userProfile={userProfile}
+            profileError={profileError}
+            sessionEmail={session.user.email}
             isAdmin={isAdmin}
             isWriter={isWriter}
+            onRetryProfile={() => void loadUserProfile()}
             onEditProfile={() => setShowProfileSettings(true)}
             onNotifications={() => setShowNotificationSettings(true)}
             onGoals={() => setOverlay('goals')}
@@ -322,9 +373,9 @@ export default function Dashboard({ session }: DashboardProps) {
         />
       )}
 
-      {showDeleteAccount && userProfile && (
+      {showDeleteAccount && (
         <DeleteAccountScreen
-          email={userProfile.email}
+          email={userProfile?.email || session.user.email || ''}
           onClose={() => setShowDeleteAccount(false)}
           onDeleted={() => {
             setShowDeleteAccount(false);

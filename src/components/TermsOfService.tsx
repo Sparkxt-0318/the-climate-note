@@ -3,7 +3,8 @@ import { ArrowLeft, FileText } from 'lucide-react';
 
 export default function TermsOfService() {
   const goBack = () => {
-    window.history.back();
+    window.location.hash = '';
+    window.dispatchEvent(new Event('app-route-change'));
   };
 
   return (

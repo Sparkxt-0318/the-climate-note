@@ -30,6 +30,8 @@ import { scrollAppToTop } from './lib/scrollToTop';
 
 import { initializeNativeShell, hideNativeSplash } from './lib/nativeShell';
 
+import { withTimeout } from './lib/withTimeout';
+
 import MobileAppFrame, { FrameBackground } from './components/layout/MobileAppFrame';
 
 
@@ -96,6 +98,10 @@ function App() {
 
         await initializeNativeShell();
 
+        // Hide splash immediately so slow network never looks like an infinite hang.
+        // React loading UI covers auth/config init afterward.
+        void hideNativeSplash();
+
         // Initialize Capacitor deep links before auth (cold-start URLs)
 
         if (Capacitor.isNativePlatform()) {
@@ -128,7 +134,14 @@ function App() {
 
         if (supabaseUrl && supabaseAnonKey && supabaseUrl !== 'https://placeholder.supabase.co') {
 
-          const configValidationError = await getSupabaseConfigError();
+          let configValidationError = await getSupabaseConfigError();
+
+          // One automatic retry for transient network blips before Connection Error.
+          if (configValidationError) {
+            await new Promise((resolve) => setTimeout(resolve, 800));
+            if (!mounted) return;
+            configValidationError = await getSupabaseConfigError();
+          }
 
           if (!mounted) return;
 
@@ -164,7 +177,11 @@ function App() {
 
 
 
-            const { data: { session } } = await supabase.auth.getSession();
+            const { data: { session } } = await withTimeout(
+              supabase.auth.getSession(),
+              12_000,
+              'Could not restore your session. Please try again.',
+            );
 
 
 
@@ -206,6 +223,13 @@ function App() {
 
               setSession(null);
 
+              const message =
+                authError instanceof Error
+                  ? authError.message
+                  : 'Could not restore your session. Please try again.';
+
+              showToast(message, 'error');
+
             }
 
           }
@@ -239,8 +263,6 @@ function App() {
         if (mounted) {
 
           setLoading(false);
-
-          void hideNativeSplash();
 
         }
 

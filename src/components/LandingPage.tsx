@@ -12,6 +12,7 @@ import {
   type OAuthProvider,
 } from '../lib/authProviders';
 import { canUseNativeAppleSignIn, signInWithAppleNative } from '../lib/appleAuth';
+import { withTimeout } from '../lib/withTimeout';
 import { showToast } from './ui/Toast';
 import AppShell from './ui/AppShell';
 import GradientButton from './ui/GradientButton';
@@ -44,6 +45,7 @@ export default function LandingPage() {
     apple: false,
   });
   const [oauthReady, setOauthReady] = useState(false);
+  const [oauthFetchFailed, setOauthFetchFailed] = useState(false);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
 
   const isNative = Capacitor.isNativePlatform();
@@ -54,10 +56,14 @@ export default function LandingPage() {
     let cancelled = false;
 
     const loadProviders = async (forceRefresh = false) => {
-      const providers = await getEnabledOAuthProviders(forceRefresh);
+      const result = await getEnabledOAuthProviders(forceRefresh);
       if (!cancelled) {
-        setOauthProviders(providers);
+        setOauthProviders({ google: result.google, apple: result.apple });
+        setOauthFetchFailed(result.fetchFailed);
         setOauthReady(true);
+        if (result.fetchFailed) {
+          showToast('Could not verify sign-in options. You can still try Apple or Google.', 'error');
+        }
       }
     };
 
@@ -78,7 +84,10 @@ export default function LandingPage() {
 
     const refreshProviders = () => {
       clearOAuthProviderCache();
-      void getEnabledOAuthProviders(true).then(setOauthProviders);
+      void getEnabledOAuthProviders(true).then((result) => {
+        setOauthProviders({ google: result.google, apple: result.apple });
+        setOauthFetchFailed(result.fetchFailed);
+      });
     };
 
     window.addEventListener('focus', refreshProviders);
@@ -88,8 +97,23 @@ export default function LandingPage() {
   useEffect(() => {
     if (!isNative) return;
 
+    let oauthLoadingTimeout: ReturnType<typeof setTimeout> | undefined;
+
+    const clearOAuthLoading = (message?: string) => {
+      if (oauthLoadingTimeout) {
+        clearTimeout(oauthLoadingTimeout);
+        oauthLoadingTimeout = undefined;
+      }
+      setLoading(false);
+      if (message) showToast(message, 'error');
+    };
+
     const onAuthComplete = (event: Event) => {
       const detail = (event as CustomEvent<{ ok: boolean; error?: string }>).detail;
+      if (oauthLoadingTimeout) {
+        clearTimeout(oauthLoadingTimeout);
+        oauthLoadingTimeout = undefined;
+      }
       setLoading(false);
       if (detail?.ok) {
         showToast('Signed in successfully!', 'success');
@@ -98,13 +122,40 @@ export default function LandingPage() {
       }
     };
 
-    const onBrowserClosed = () => setLoading(false);
+    const onBrowserClosed = () => clearOAuthLoading();
+
+    const onAppActive = () => {
+      // If SFSafariViewController closed without a callback, don't leave buttons disabled.
+      void supabase.auth.getSession().then(({ data }) => {
+        if (!data.session) {
+          setLoading((prev) => {
+            if (prev) {
+              showToast('Sign-in did not finish. Please try again.', 'error');
+            }
+            return false;
+          });
+        }
+      });
+    };
+
+    const onOAuthLoadingStart = () => {
+      if (oauthLoadingTimeout) clearTimeout(oauthLoadingTimeout);
+      oauthLoadingTimeout = setTimeout(() => {
+        clearOAuthLoading('Sign-in timed out. Please try again.');
+      }, 75_000);
+    };
 
     window.addEventListener('native-auth-complete', onAuthComplete);
     window.addEventListener('native-oauth-browser-closed', onBrowserClosed);
+    window.addEventListener('app-became-active', onAppActive);
+    window.addEventListener('native-oauth-loading-start', onOAuthLoadingStart);
+
     return () => {
+      if (oauthLoadingTimeout) clearTimeout(oauthLoadingTimeout);
       window.removeEventListener('native-auth-complete', onAuthComplete);
       window.removeEventListener('native-oauth-browser-closed', onBrowserClosed);
+      window.removeEventListener('app-became-active', onAppActive);
+      window.removeEventListener('native-oauth-loading-start', onOAuthLoadingStart);
     };
   }, [isNative]);
 
@@ -115,9 +166,14 @@ export default function LandingPage() {
       return;
     }
     setLoading(true);
+    let keepLoadingForInAppBrowser = false;
     try {
       if (provider === 'apple' && canUseNativeAppleSignIn()) {
-        const result = await signInWithAppleNative();
+        const result = await withTimeout(
+          signInWithAppleNative(),
+          60_000,
+          'Sign in with Apple timed out. Please try again.',
+        );
         if (result.ok) {
           showToast('Signed in successfully!', 'success');
         } else if (result.error && result.error !== 'Sign in cancelled.') {
@@ -131,18 +187,25 @@ export default function LandingPage() {
         return;
       }
 
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider,
-        options: {
-          redirectTo: getAuthRedirectUrl(),
-          skipBrowserRedirect: isNative,
-          ...(provider === 'apple' ? { scopes: 'name email' } : {}),
-        },
-      });
+      const { data, error } = await withTimeout(
+        supabase.auth.signInWithOAuth({
+          provider,
+          options: {
+            redirectTo: getAuthRedirectUrl(),
+            skipBrowserRedirect: isNative,
+            ...(provider === 'apple' ? { scopes: 'name email' } : {}),
+          },
+        }),
+        15_000,
+        'Sign-in timed out. Please try again.',
+      );
       if (error) throw error;
       if (data.url) {
         if (isNative) {
+          // SFSafariViewController sheet — stay in-app (Guideline 4)
+          window.dispatchEvent(new Event('native-oauth-loading-start'));
           await openInAppOAuth(data.url);
+          keepLoadingForInAppBrowser = true;
           return;
         }
         window.location.href = data.url;
@@ -150,9 +213,9 @@ export default function LandingPage() {
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Please try again.';
       showToast(`Failed to sign in with ${provider}: ${message}`, 'error');
-      setLoading(false);
     } finally {
-      if (provider === 'apple' && canUseNativeAppleSignIn()) {
+      // In-app OAuth keeps loading until callback / browserFinished / timeout.
+      if (!keepLoadingForInAppBrowser) {
         setLoading(false);
       }
     }
@@ -169,26 +232,47 @@ export default function LandingPage() {
     setLoading(true);
     try {
       if (showForgotPassword) {
-        const { error } = await supabase.auth.resetPasswordForEmail(email, {
-          redirectTo: isNative
-            ? getAuthRedirectUrl('/auth/reset-password')
-            : getAuthRedirectUrl('/reset-password'),
-        });
+        const { error } = await withTimeout(
+          supabase.auth.resetPasswordForEmail(email, {
+            redirectTo: isNative
+              ? getAuthRedirectUrl('/auth/reset-password')
+              : getAuthRedirectUrl('/reset-password'),
+          }),
+          15_000,
+          'Password reset timed out. Please try again.',
+        );
         if (error) throw error;
         showToast('Password reset email sent!', 'success');
         setShowForgotPassword(false);
       } else if (isLogin) {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        const { data, error } = await withTimeout(
+          supabase.auth.signInWithPassword({ email, password }),
+          15_000,
+          'Sign-in timed out. Please check your connection and try again.',
+        );
         if (error) throw error;
+        if (!data.session) {
+          showToast('Sign-in did not complete. Please confirm your email and try again.', 'error');
+          return;
+        }
         showToast('Welcome back!', 'success');
       } else {
-        const { error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: { emailRedirectTo: getAuthRedirectUrl() },
-        });
+        const { data, error } = await withTimeout(
+          supabase.auth.signUp({
+            email,
+            password,
+            options: { emailRedirectTo: getAuthRedirectUrl() },
+          }),
+          15_000,
+          'Sign-up timed out. Please check your connection and try again.',
+        );
         if (error) throw error;
-        showToast('Welcome! Setting up your account...', 'success');
+        if (!data.session) {
+          showToast('Check your email to confirm your account, then log in.', 'success');
+          setIsLogin(true);
+        } else {
+          showToast('Welcome! Setting up your account...', 'success');
+        }
       }
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : '';
@@ -283,6 +367,18 @@ export default function LandingPage() {
                 ? 'Sign in to pick up your streak.'
                 : 'Join free — takes under a minute.'}
           </p>
+          {!showForgotPassword && (
+            <button
+              type="button"
+              onClick={() => {
+                setIsLogin(!isLogin);
+                setAcceptedTerms(false);
+              }}
+              className="mt-3 text-sm font-semibold text-forest hover:text-canopy transition-colors"
+            >
+              {isLogin ? 'Need an account? Sign up' : 'Already have an account? Log in'}
+            </button>
+          )}
         </div>
 
         <div className="app-card p-6 space-y-5 flex-1">
@@ -311,6 +407,23 @@ export default function LandingPage() {
                     >
                       <GoogleIcon />
                       Continue with Google
+                    </button>
+                  )}
+                  {oauthFetchFailed && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        clearOAuthProviderCache();
+                        setOauthReady(false);
+                        void getEnabledOAuthProviders(true).then((result) => {
+                          setOauthProviders({ google: result.google, apple: result.apple });
+                          setOauthFetchFailed(result.fetchFailed);
+                          setOauthReady(true);
+                        });
+                      }}
+                      className="text-xs text-sage-600 underline self-center"
+                    >
+                      Retry loading sign-in options
                     </button>
                   )}
                 </>
@@ -361,6 +474,16 @@ export default function LandingPage() {
                 className="text-sm text-sage-600 hover:text-forest transition-colors"
               >
                 Forgot password?
+              </button>
+            )}
+
+            {showForgotPassword && (
+              <button
+                type="button"
+                onClick={() => setShowForgotPassword(false)}
+                className="text-sm text-sage-600 hover:text-forest transition-colors"
+              >
+                Cancel — back to log in
               </button>
             )}
 

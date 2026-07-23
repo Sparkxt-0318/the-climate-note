@@ -77,7 +77,11 @@ export async function applySavedReminderSchedule() {
 
   if (Capacitor.isNativePlatform()) {
     const { CapacitorNotifications } = await import('../capacitor-plugins');
-    await CapacitorNotifications.initialize();
+    const granted = await CapacitorNotifications.checkPermissions();
+    if (!granted) {
+      // Do not prompt on cold start — user must opt in via Notification Settings.
+      return;
+    }
     await CapacitorNotifications.scheduleDailyReminder(settings.reminderTime);
     return;
   }

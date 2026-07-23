@@ -6,6 +6,8 @@ import { getInstantSummaryBullets } from '../../lib/articleInsights';
 
 interface HomeViewProps {
   article: Article | null;
+  articleLoadError?: string | null;
+  onRetryArticle?: () => void;
   userProfile: UserProfile | null;
   onProfileUpdate: (profile: UserProfile) => void;
 }
@@ -32,6 +34,8 @@ function suggestedActionFromArticle(article: Article): { title: string; subtitle
 
 export default function HomeView({
   article,
+  articleLoadError = null,
+  onRetryArticle,
   userProfile,
   onProfileUpdate,
 }: HomeViewProps) {
@@ -48,6 +52,26 @@ export default function HomeView({
     : 0;
 
   if (!article) {
+    if (articleLoadError) {
+      return (
+        <div className="app-screen py-12 text-center">
+          <div className="app-card p-8 space-y-4">
+            <h2 className="text-lg font-bold text-ink mb-2">Couldn&apos;t load today&apos;s story</h2>
+            <p className="text-sm text-ink-muted">{articleLoadError}</p>
+            {onRetryArticle ? (
+              <button
+                type="button"
+                onClick={onRetryArticle}
+                className="w-full py-3 rounded-2xl bg-forest text-cream font-semibold text-sm"
+              >
+                Retry
+              </button>
+            ) : null}
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="app-screen py-12 text-center">
         <div className="app-card p-8">

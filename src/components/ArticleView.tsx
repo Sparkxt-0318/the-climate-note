@@ -256,7 +256,11 @@ export default function ArticleView({ article, userProfile, onProfileUpdate, com
 
   const handleSubmitNote = async () => {
     const finalNote = getFinalNote();
-    if (!finalNote || !article || !userProfile) return;
+    if (!finalNote || !article) return;
+    if (!userProfile) {
+      showToast('Your profile is still loading. Please try again in a moment.', 'error');
+      return;
+    }
     if (finalNote.length > NOTE_MAX_LENGTH) {
       showToast(`Notes must be ${NOTE_MAX_LENGTH} characters or fewer`, 'error');
       setNoteStep('selecting');

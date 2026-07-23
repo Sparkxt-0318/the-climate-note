@@ -3,7 +3,8 @@ import { ArrowLeft, Shield } from 'lucide-react';
 
 export default function PrivacyPolicy() {
   const goBack = () => {
-    window.history.back();
+    window.location.hash = '';
+    window.dispatchEvent(new Event('app-route-change'));
   };
 
   return (

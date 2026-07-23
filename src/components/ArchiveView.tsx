@@ -4,6 +4,8 @@ import { supabase } from '../lib/supabase';
 import { Article } from '../types';
 import ArticleCard, { ArticleCardSkeleton } from './ui/ArticleCard';
 import { matchesQuery, stripHtmlToText } from '../lib/searchText';
+import { withTimeout } from '../lib/withTimeout';
+import { showToast } from './ui/Toast';
 
 interface ArchiveViewProps {
   onArticleSelect: (article: Article) => void;
@@ -30,13 +32,14 @@ export default function ArchiveView({
 }: ArchiveViewProps) {
   const [articles, setArticles] = useState<Article[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [categories, setCategories] = useState<string[]>([]);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    loadArticles();
+    void loadArticles();
   }, []);
 
   useEffect(() => {
@@ -49,12 +52,18 @@ export default function ArchiveView({
   }, [autoFocusSearch, onSearchFocused]);
 
   const loadArticles = async () => {
+    setLoading(true);
+    setLoadError(null);
     try {
-      const { data, error } = await supabase
-        .from('articles')
-        .select('*')
-        .eq('is_published', true)
-        .order('published_date', { ascending: false });
+      const { data, error } = await withTimeout(
+        supabase
+          .from('articles')
+          .select('*')
+          .eq('is_published', true)
+          .order('published_date', { ascending: false }),
+        15_000,
+        'Loading archive timed out. Please try again.',
+      );
 
       if (error) throw error;
 
@@ -68,6 +77,11 @@ export default function ArchiveView({
       setCategories(uniqueCategories);
     } catch (error) {
       console.error('Error loading articles:', error);
+      const message =
+        error instanceof Error ? error.message : 'Failed to load archive stories.';
+      setLoadError(message);
+      showToast(message, 'error');
+      setArticles([]);
     } finally {
       setLoading(false);
     }
@@ -106,6 +120,23 @@ export default function ArchiveView({
           <ArticleCardSkeleton />
           <ArticleCardSkeleton />
         </div>
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="text-center py-12 app-card px-6 space-y-4">
+        <Archive className="w-12 h-12 text-sage-300 mx-auto" />
+        <h3 className="text-editorial-title text-lg">Couldn&apos;t load archive</h3>
+        <p className="text-[15px] text-ink-muted">{loadError}</p>
+        <button
+          type="button"
+          onClick={() => void loadArticles()}
+          className="w-full py-3 rounded-2xl bg-forest text-cream font-semibold text-sm"
+        >
+          Retry
+        </button>
       </div>
     );
   }
