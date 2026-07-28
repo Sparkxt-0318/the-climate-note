@@ -79,6 +79,15 @@ serve(async (req) => {
       throw profileDeleteError
     }
 
+    // articles.author_id references auth.users without ON DELETE — clear before auth delete
+    const { error: authorClearError } = await adminClient
+      .from('articles')
+      .update({ author_id: null })
+      .eq('author_id', userId)
+    if (authorClearError && authorClearError.code !== '42P01' && authorClearError.code !== 'PGRST204') {
+      throw authorClearError
+    }
+
     const { error: deleteError } = await adminClient.auth.admin.deleteUser(userId)
     if (deleteError) {
       throw deleteError

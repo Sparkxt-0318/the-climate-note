@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Session } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import AppHeader, { AppTab } from './layout/AppHeader';
@@ -35,6 +35,10 @@ interface DashboardProps {
 
 type Overlay = 'goals' | 'leaderboard' | null;
 
+/** Single deadline for today + latest-article fallback (App Store 2.1(a)). */
+const ARTICLE_LOAD_TIMEOUT_MS = 18_000;
+const PROFILE_LOAD_TIMEOUT_MS = 15_000;
+
 export default function Dashboard({ session }: DashboardProps) {
   const [currentTab, setCurrentTab] = useState<AppTab>('home');
   const [overlay, setOverlay] = useState<Overlay>(null);
@@ -42,6 +46,7 @@ export default function Dashboard({ session }: DashboardProps) {
   const [selectedArchiveArticle, setSelectedArchiveArticle] = useState<Article | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [profileError, setProfileError] = useState<string | null>(null);
+  const [profileLoading, setProfileLoading] = useState(true);
   const [articleLoadError, setArticleLoadError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [showTutorial, setShowTutorial] = useState(false);
@@ -52,6 +57,10 @@ export default function Dashboard({ session }: DashboardProps) {
   const [showProfileSettings, setShowProfileSettings] = useState(false);
   const [showDeleteAccount, setShowDeleteAccount] = useState(false);
   const [focusArchiveSearch, setFocusArchiveSearch] = useState(false);
+
+  const articleRequestIdRef = useRef(0);
+  const profileRequestIdRef = useRef(0);
+  const mountedRef = useRef(true);
 
   const isAdmin = userProfile?.role === 'admin';
   const isWriter = userProfile?.role === 'writer' || isAdmin;
@@ -82,12 +91,9 @@ export default function Dashboard({ session }: DashboardProps) {
     scrollAppToTop();
   };
 
-  useEffect(() => {
-    loadUserProfile();
-    loadTodayArticle();
-  }, [session]);
-
-  const loadUserProfile = async () => {
+  const loadUserProfile = useCallback(async () => {
+    const requestId = ++profileRequestIdRef.current;
+    setProfileLoading(true);
     setProfileError(null);
     try {
       await withTimeout(
@@ -102,6 +108,7 @@ export default function Dashboard({ session }: DashboardProps) {
 
           if (data) {
             const profile = await loadFreshUserProfile(session.user.id);
+            if (!mountedRef.current || requestId !== profileRequestIdRef.current) return;
             setUserProfile(profile);
           } else {
             try {
@@ -119,6 +126,7 @@ export default function Dashboard({ session }: DashboardProps) {
                 .single();
 
               if (createError) throw createError;
+              if (!mountedRef.current || requestId !== profileRequestIdRef.current) return;
               setUserProfile(newProfile);
               // Tutorial disabled until aligned with current 5-tab shell (App Store readiness).
             } catch (createError: unknown) {
@@ -132,92 +140,112 @@ export default function Dashboard({ session }: DashboardProps) {
 
                 if (retryError) throw retryError;
                 const profile = await loadFreshUserProfile(session.user.id);
+                if (!mountedRef.current || requestId !== profileRequestIdRef.current) return;
                 setUserProfile(profile);
-                if (profile.total_notes === 0) {
-                  /* tutorial deferred */
-                }
               } else {
                 throw createError;
               }
             }
           }
         })(),
-        15_000,
+        PROFILE_LOAD_TIMEOUT_MS,
         'Loading your profile timed out. Please try again.',
       );
     } catch (error) {
-      console.error('Error loading user profile:', error);
+      if (!mountedRef.current || requestId !== profileRequestIdRef.current) return;
+      if (import.meta.env.DEV) {
+        console.error('Error loading user profile:', error);
+      }
       const message =
         error instanceof Error ? error.message : 'Failed to load your profile';
       setProfileError(message);
       showToast(message, 'error');
+    } finally {
+      if (mountedRef.current && requestId === profileRequestIdRef.current) {
+        setProfileLoading(false);
+      }
     }
-  };
+  }, [session.user]);
 
-  const loadTodayArticle = async () => {
+  const loadTodayArticle = useCallback(async () => {
+    const requestId = ++articleRequestIdRef.current;
     setArticleLoadError(null);
     try {
-      const today = getAppToday();
-      const { data, error } = await withTimeout(
-        supabase
-          .from('articles')
-          .select('*')
-          .eq('published_date', today)
-          .eq('is_published', true)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle(),
-        15_000,
+      const article = await withTimeout(
+        (async () => {
+          const today = getAppToday();
+          const { data, error } = await supabase
+            .from('articles')
+            .select('*')
+            .eq('published_date', today)
+            .eq('is_published', true)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+          if (error && error.code !== 'PGRST116') throw error;
+          if (data) return data as Article;
+
+          // Fallback so Home is never empty when today has no published article.
+          const { data: latest, error: latestError } = await supabase
+            .from('articles')
+            .select('*')
+            .eq('is_published', true)
+            .order('published_date', { ascending: false })
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+          if (latestError && latestError.code !== 'PGRST116') throw latestError;
+          return (latest as Article | null) ?? null;
+        })(),
+        ARTICLE_LOAD_TIMEOUT_MS,
         'Loading today\'s article timed out. Please try again.',
       );
 
-      if (error && error.code !== 'PGRST116') throw error;
-
-      if (data) {
-        setTodayArticle(data);
-        return;
-      }
-
-      // Fallback so Home is never empty when today has no published article.
-      const { data: latest, error: latestError } = await withTimeout(
-        supabase
-          .from('articles')
-          .select('*')
-          .eq('is_published', true)
-          .order('published_date', { ascending: false })
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle(),
-        15_000,
-        'Loading articles timed out. Please try again.',
-      );
-
-      if (latestError && latestError.code !== 'PGRST116') throw latestError;
-      setTodayArticle(latest);
+      if (!mountedRef.current || requestId !== articleRequestIdRef.current) return;
+      setTodayArticle(article);
     } catch (error) {
-      console.error('Error loading today\'s article:', error);
+      if (!mountedRef.current || requestId !== articleRequestIdRef.current) return;
+      if (import.meta.env.DEV) {
+        console.error('Error loading today\'s article:', error);
+      }
       const message =
         error instanceof Error ? error.message : 'Failed to load today\'s article';
       setArticleLoadError(message);
       showToast(message, 'error');
       setTodayArticle(null);
     } finally {
-      setLoading(false);
+      if (mountedRef.current && requestId === articleRequestIdRef.current) {
+        setLoading(false);
+      }
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    setLoading(true);
+    void loadUserProfile();
+    void loadTodayArticle();
+    return () => {
+      mountedRef.current = false;
+      articleRequestIdRef.current += 1;
+      profileRequestIdRef.current += 1;
+    };
+  }, [session, loadUserProfile, loadTodayArticle]);
 
   useEffect(() => {
     void applySavedReminderSchedule();
     const handleAppActive = () => {
-      loadTodayArticle();
-      loadUserProfile();
+      void loadTodayArticle();
+      void loadUserProfile();
     };
     window.addEventListener('app-became-active', handleAppActive);
     return () => {
       stopWebReminderSchedule();
       window.removeEventListener('app-became-active', handleAppActive);
     };
-  }, []);
+  }, [loadTodayArticle, loadUserProfile]);
 
   if (loading) {
     return (
@@ -307,6 +335,7 @@ export default function Dashboard({ session }: DashboardProps) {
           <ProfileView
             userProfile={userProfile}
             profileError={profileError}
+            profileLoading={profileLoading}
             sessionEmail={session.user.email}
             isAdmin={isAdmin}
             isWriter={isWriter}

@@ -202,15 +202,17 @@ export default function LandingPage() {
       if (error) throw error;
       if (data.url) {
         if (isNative) {
-          // SFSafariViewController sheet — stay in-app (Guideline 4)
+          // SFSafariViewController only — never fall back to Safari.app (Guideline 4)
           window.dispatchEvent(new Event('native-oauth-loading-start'));
           await openInAppOAuth(data.url);
           keepLoadingForInAppBrowser = true;
           return;
         }
+        // Web build may use a full-page OAuth redirect.
         window.location.href = data.url;
       }
     } catch (error: unknown) {
+      // Native Browser.open failures land here — do not open an external browser.
       const message = error instanceof Error ? error.message : 'Please try again.';
       showToast(`Failed to sign in with ${provider}: ${message}`, 'error');
     } finally {
@@ -382,63 +384,7 @@ export default function LandingPage() {
         </div>
 
         <div className="app-card p-6 space-y-5 flex-1">
-          {!showForgotPassword && (
-            <>
-              {!oauthReady ? (
-                <>
-                  <div className="h-12 rounded-xl bg-sage-50 animate-pulse" />
-                  <div className="h-12 rounded-xl bg-sage-50 animate-pulse" />
-                </>
-              ) : (
-                <>
-                  {oauthProviders.apple && (
-                    <AppleSignInButton
-                      onClick={() => handleSocialAuth('apple')}
-                      disabled={loading || (!isLogin && !showForgotPassword && !acceptedTerms)}
-                    />
-                  )}
-                  {oauthProviders.google && (
-                    <button
-                      type="button"
-                      onClick={() => handleSocialAuth('google')}
-                      disabled={loading || (!isLogin && !showForgotPassword && !acceptedTerms)}
-                      className="btn-outline"
-                      aria-label="Continue with Google"
-                    >
-                      <GoogleIcon />
-                      Continue with Google
-                    </button>
-                  )}
-                  {oauthFetchFailed && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        clearOAuthProviderCache();
-                        setOauthReady(false);
-                        void getEnabledOAuthProviders(true).then((result) => {
-                          setOauthProviders({ google: result.google, apple: result.apple });
-                          setOauthFetchFailed(result.fetchFailed);
-                          setOauthReady(true);
-                        });
-                      }}
-                      className="text-xs text-sage-600 underline self-center"
-                    >
-                      Retry loading sign-in options
-                    </button>
-                  )}
-                </>
-              )}
-
-              {oauthReady && (oauthProviders.apple || oauthProviders.google) && !showForgotPassword && (
-                <div className="flex items-center gap-3">
-                  <div className="flex-1 h-px bg-sage-100" />
-                  <span className="text-xs text-sage-400">or</span>
-                  <div className="flex-1 h-px bg-sage-100" />
-                </div>
-              )}
-            </>
-          )}
-
+          {/* Email/password first — App Review uses demo credentials (Guideline 2.1 / 4). */}
           <form onSubmit={handleAuth} className="space-y-4">
             <div className="relative">
               <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-sage-400" />
@@ -524,6 +470,63 @@ export default function LandingPage() {
               )}
             </GradientButton>
           </form>
+
+          {!showForgotPassword && (
+            <>
+              {oauthReady && (oauthProviders.apple || oauthProviders.google) && (
+                <div className="flex items-center gap-3">
+                  <div className="flex-1 h-px bg-sage-100" />
+                  <span className="text-xs text-sage-400">or</span>
+                  <div className="flex-1 h-px bg-sage-100" />
+                </div>
+              )}
+
+              {!oauthReady ? (
+                <>
+                  <div className="h-12 rounded-xl bg-sage-50 animate-pulse" />
+                  <div className="h-12 rounded-xl bg-sage-50 animate-pulse" />
+                </>
+              ) : (
+                <>
+                  {oauthProviders.apple && (
+                    <AppleSignInButton
+                      onClick={() => handleSocialAuth('apple')}
+                      disabled={loading || (!isLogin && !acceptedTerms)}
+                    />
+                  )}
+                  {oauthProviders.google && (
+                    <button
+                      type="button"
+                      onClick={() => handleSocialAuth('google')}
+                      disabled={loading || (!isLogin && !acceptedTerms)}
+                      className="btn-outline"
+                      aria-label="Continue with Google"
+                    >
+                      <GoogleIcon />
+                      Continue with Google
+                    </button>
+                  )}
+                  {oauthFetchFailed && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        clearOAuthProviderCache();
+                        setOauthReady(false);
+                        void getEnabledOAuthProviders(true).then((result) => {
+                          setOauthProviders({ google: result.google, apple: result.apple });
+                          setOauthFetchFailed(result.fetchFailed);
+                          setOauthReady(true);
+                        });
+                      }}
+                      className="text-xs text-sage-600 underline self-center"
+                    >
+                      Retry loading sign-in options
+                    </button>
+                  )}
+                </>
+              )}
+            </>
+          )}
         </div>
       </div>
     </div>

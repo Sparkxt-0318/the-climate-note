@@ -21,6 +21,7 @@ import { openLegalPage, openSupportEmail, LEGAL } from '../lib/legalLinks';
 interface ProfileViewProps {
   userProfile: UserProfile | null;
   profileError?: string | null;
+  profileLoading?: boolean;
   sessionEmail?: string | null;
   isAdmin: boolean;
   isWriter: boolean;
@@ -39,6 +40,7 @@ interface ProfileViewProps {
 export default function ProfileView({
   userProfile,
   profileError = null,
+  profileLoading = false,
   sessionEmail = null,
   isAdmin,
   isWriter,
@@ -57,22 +59,34 @@ export default function ProfileView({
     return (
       <div className="app-screen space-y-5">
         <div className="app-card p-8 text-center space-y-4">
-          <h2 className="text-lg font-bold text-ink">Profile unavailable</h2>
-          <p className="text-sm text-ink-muted leading-relaxed">
-            {profileError || 'We could not load your profile. Check your connection and try again.'}
-          </p>
-          {sessionEmail ? (
-            <p className="text-xs text-ink-soft truncate">{sessionEmail}</p>
-          ) : null}
-          {onRetryProfile ? (
-            <button
-              type="button"
-              onClick={onRetryProfile}
-              className="w-full py-3 rounded-2xl bg-forest text-cream font-semibold text-sm"
-            >
-              Retry
-            </button>
-          ) : null}
+          {profileLoading ? (
+            <>
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-sage-500 mx-auto" />
+              <h2 className="text-lg font-bold text-ink">Loading profile…</h2>
+              <p className="text-sm text-ink-muted leading-relaxed">
+                Fetching your account details.
+              </p>
+            </>
+          ) : (
+            <>
+              <h2 className="text-lg font-bold text-ink">Profile unavailable</h2>
+              <p className="text-sm text-ink-muted leading-relaxed">
+                {profileError || 'We could not load your profile. Check your connection and try again.'}
+              </p>
+              {sessionEmail ? (
+                <p className="text-xs text-ink-soft truncate">{sessionEmail}</p>
+              ) : null}
+              {onRetryProfile ? (
+                <button
+                  type="button"
+                  onClick={onRetryProfile}
+                  className="w-full py-3 rounded-2xl bg-forest text-cream font-semibold text-sm"
+                >
+                  Retry
+                </button>
+              ) : null}
+            </>
+          )}
         </div>
 
         <div className="app-card overflow-hidden">

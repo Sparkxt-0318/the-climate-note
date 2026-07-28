@@ -24,7 +24,9 @@ export async function refreshUserProfileStats(userId: string): Promise<UserProfi
   }
 
   if (error && error.code !== 'PGRST202') {
-    console.warn('refresh_user_profile_stats RPC unavailable, falling back to select:', error.message);
+    if (import.meta.env.DEV) {
+      console.warn('refresh_user_profile_stats RPC unavailable, falling back to select:', error.message);
+    }
   }
 
   return selectUserProfile(userId);
@@ -61,7 +63,9 @@ export async function reconcileProfileStatsIfNeeded(
   try {
     return await refreshUserProfileStats(userId);
   } catch (err) {
-    console.error('Failed to reconcile profile stats:', err);
+    if (import.meta.env.DEV) {
+      console.error('Failed to reconcile profile stats:', err);
+    }
     return profile;
   }
 }
@@ -71,7 +75,9 @@ export async function loadFreshUserProfile(userId: string): Promise<UserProfile>
   try {
     return await refreshUserProfileStats(userId);
   } catch (err) {
-    console.warn('Profile stats refresh failed, using stored profile:', err);
+    if (import.meta.env.DEV) {
+      console.warn('Profile stats refresh failed, using stored profile:', err);
+    }
     const profile = await selectUserProfile(userId);
     return reconcileProfileStatsIfNeeded(userId, profile);
   }
