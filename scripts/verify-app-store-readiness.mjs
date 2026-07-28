@@ -2,7 +2,11 @@
  * Read-only App Store readiness checks against production Supabase.
  *
  * Usage:
- *   APP_REVIEW_EMAIL=... APP_REVIEW_PASSWORD=... node scripts/verify-app-store-readiness.mjs
+ *   # Full check (demo login):
+ *   APP_REVIEW_EMAIL=... APP_REVIEW_PASSWORD=... npm run verify:appstore
+ *
+ *   # Partial check (no demo creds):
+ *   npm run verify:appstore -- --partial
  *
  * Never commit reviewer credentials. Credentials must come from process env.
  */
@@ -13,6 +17,7 @@ import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = join(__dirname, '..');
+const partialOnly = process.argv.includes('--partial');
 
 function loadEnvFile() {
   const envPath = join(root, '.env');
@@ -40,22 +45,18 @@ function ok(message) {
   console.log(`✅ ${message}`);
 }
 
+function warn(message) {
+  console.log(`⚠️  ${message}`);
+}
+
 const env = loadEnvFile();
 const supabaseUrl = env.VITE_SUPABASE_URL;
 const supabaseAnonKey = env.VITE_SUPABASE_ANON_KEY;
-const reviewEmail = process.env.APP_REVIEW_EMAIL;
-const reviewPassword = process.env.APP_REVIEW_PASSWORD;
+const reviewEmail = process.env.APP_REVIEW_EMAIL || env.APP_REVIEW_EMAIL;
+const reviewPassword = process.env.APP_REVIEW_PASSWORD || env.APP_REVIEW_PASSWORD;
 
 if (!supabaseUrl || !supabaseAnonKey || supabaseUrl.includes('placeholder')) {
   fail('VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY missing or placeholder in .env');
-}
-
-if (!reviewEmail || !reviewPassword) {
-  fail(
-    'APP_REVIEW_EMAIL and APP_REVIEW_PASSWORD must be set in the process environment. ' +
-      'Demo-login verification did NOT pass. Example:\n' +
-      '  APP_REVIEW_EMAIL=reviewer@example.com APP_REVIEW_PASSWORD=secret node scripts/verify-app-store-readiness.mjs',
-  );
 }
 
 const supabase = createClient(supabaseUrl, supabaseAnonKey, {
@@ -77,10 +78,16 @@ if (!settingsResponse.ok) {
 
 const settings = await settingsResponse.json();
 ok('Supabase auth settings reachable');
+const googleEnabled = Boolean(settings.external?.google);
+const appleEnabled = Boolean(settings.external?.apple);
 console.log(
   `   Providers — email: ${Boolean(settings.external?.email ?? true)}, ` +
-    `google: ${Boolean(settings.external?.google)}, apple: ${Boolean(settings.external?.apple)}`,
+    `google: ${googleEnabled}, apple: ${appleEnabled}`,
 );
+
+if (!appleEnabled && googleEnabled) {
+  warn('Google is enabled but Apple is not — Guideline 4.8 requires Sign in with Apple.');
+}
 
 const { data: articles, error: articlesError } = await supabase
   .from('articles')
@@ -100,6 +107,59 @@ if (!articles?.length) {
 ok(
   `Published article available: "${articles[0].title}" (${articles[0].published_date})`,
 );
+
+const deleteProbe = await fetch(`${supabaseUrl}/functions/v1/delete-account`, {
+  method: 'POST',
+  headers: {
+    apikey: supabaseAnonKey,
+    Authorization: `Bearer ${supabaseAnonKey}`,
+    'Content-Type': 'application/json',
+  },
+});
+if (deleteProbe.status === 404) {
+  fail('delete-account edge function not deployed (HTTP 404). Deploy before review.');
+}
+if (![401, 403].includes(deleteProbe.status)) {
+  warn(
+    `delete-account probe returned ${deleteProbe.status} (expected 401/403 without a user JWT). Confirm deploy + CORS.`,
+  );
+} else {
+  ok(`delete-account edge function reachable (HTTP ${deleteProbe.status} without user session)`);
+}
+
+const autoProbe = await fetch(`${supabaseUrl}/functions/v1/auto-publish-articles`, {
+  method: 'POST',
+  headers: {
+    apikey: supabaseAnonKey,
+    Authorization: `Bearer ${supabaseAnonKey}`,
+    'Content-Type': 'application/json',
+    'x-cron-secret': 'readiness-probe-invalid',
+  },
+});
+if (autoProbe.status === 404) {
+  warn('auto-publish-articles not deployed (HTTP 404). Cron will fail until deployed.');
+} else if (autoProbe.status === 403) {
+  ok('auto-publish-articles reachable and rejecting invalid cron secret (HTTP 403)');
+} else {
+  warn(`auto-publish-articles probe returned HTTP ${autoProbe.status}`);
+}
+
+if (!reviewEmail || !reviewPassword) {
+  if (partialOnly) {
+    warn('Skipping demo login — APP_REVIEW_EMAIL / APP_REVIEW_PASSWORD not set (--partial).');
+    console.log('\n✅ Partial App Store readiness checks passed.\n');
+    console.log(
+      'Still required: set APP_REVIEW_EMAIL + APP_REVIEW_PASSWORD and re-run without --partial.\n',
+    );
+    process.exit(0);
+  }
+  fail(
+    'APP_REVIEW_EMAIL and APP_REVIEW_PASSWORD must be set in the process environment. ' +
+      'Demo-login verification did NOT pass. Example:\n' +
+      '  APP_REVIEW_EMAIL=reviewer@example.com APP_REVIEW_PASSWORD=secret npm run verify:appstore\n' +
+      'Or run a partial check: npm run verify:appstore -- --partial',
+  );
+}
 
 const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
   email: reviewEmail,
@@ -134,6 +194,9 @@ if (!profile) {
 ok(
   `Demo profile ready (streak=${profile.streak}, notes=${profile.total_notes})`,
 );
+if (profile.total_notes === 0) {
+  warn('Demo account has 0 notes — consider seeding one note so Profile looks complete.');
+}
 
 await supabase.auth.signOut();
 ok('Demo account signed out cleanly');

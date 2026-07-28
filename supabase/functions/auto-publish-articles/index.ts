@@ -1,5 +1,6 @@
 // Auto-Publish Articles Edge Function
-// Runs daily at midnight CST to publish scheduled articles
+// Runs daily at midnight America/Chicago to publish scheduled articles
+// (aligned with src/lib/appTimezone.ts and gamification SQL).
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { writeAuditLog } from '../_shared/auditLog.ts'
@@ -9,6 +10,12 @@ import { getCorsHeaders, handleCorsPreflight } from '../_shared/cors.ts'
 import { getClientIp, logSecurityEvent } from '../_shared/securityLog.ts'
 
 const ENDPOINT = 'auto-publish-articles'
+const APP_TIMEZONE = 'America/Chicago'
+
+/** YYYY-MM-DD for "today" in America/Chicago (matches client getAppToday). */
+function getAppTodayChicago(): string {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: APP_TIMEZONE }).format(new Date())
+}
 
 serve(async (req) => {
   const corsHeaders = getCorsHeaders(req)
@@ -37,14 +44,9 @@ serve(async (req) => {
     }
 
     const supabase = createServiceClient()
+    const todayApp = getAppTodayChicago()
 
-    // Get today's date in CST (China Standard Time / UTC+8)
-    const now = new Date()
-    const cstOffset = 8 * 60 // CST is UTC+8
-    const cstDate = new Date(now.getTime() + cstOffset * 60 * 1000)
-    const todayCST = cstDate.toISOString().split('T')[0] // YYYY-MM-DD format
-
-    console.log(`Running auto-publish for date: ${todayCST}`)
+    console.log(`Running auto-publish for date: ${todayApp} (${APP_TIMEZONE})`)
 
     // Atomic publish: one UPDATE avoids fetch-then-update races when cron overlaps.
     const { data: publishedArticles, error: updateError } = await supabase
@@ -52,13 +54,13 @@ serve(async (req) => {
       .update({
         is_published: true,
         status: 'published',
-        published_date: todayCST,
+        published_date: todayApp,
         updated_at: new Date().toISOString(),
       })
       .eq('auto_publish', true)
       .eq('is_published', false)
       .eq('status', 'approved')
-      .eq('scheduled_publish_date', todayCST)
+      .eq('scheduled_publish_date', todayApp)
       .select('id, title')
 
     if (updateError) {
@@ -84,7 +86,7 @@ serve(async (req) => {
     await writeAuditLog(supabase, {
       action: 'auto_publish_articles',
       ip,
-      metadata: { date: todayCST, successCount, failCount },
+      metadata: { date: todayApp, timezone: APP_TIMEZONE, successCount, failCount },
     })
 
     logSecurityEvent({
@@ -99,28 +101,28 @@ serve(async (req) => {
       JSON.stringify({
         success: true,
         message: `Published ${successCount} article(s) successfully`,
-        date: todayCST,
+        date: todayApp,
+        timezone: APP_TIMEZONE,
         published_count: successCount,
         failed_count: failCount,
-        results: results
+        results: results,
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200,
-      }
+      },
     )
-
   } catch (error) {
     console.error('Error in auto-publish function:', error)
     return new Response(
       JSON.stringify({
         success: false,
-        error: 'Auto-publish failed'
+        error: 'Auto-publish failed',
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 500,
-      }
+      },
     )
   }
 })

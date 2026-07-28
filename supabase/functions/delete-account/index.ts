@@ -55,6 +55,32 @@ serve(async (req) => {
       .update({ user_id: null, ip: null, metadata: {} })
       .eq('user_id', userId)
 
+    // note_impacts.reviewed_by / impact_review_queue.reviewed_by reference user_profiles
+    // without ON DELETE — clear before profile delete (admin/writer accounts).
+    const { error: impactReviewerClearError } = await adminClient
+      .from('note_impacts')
+      .update({ reviewed_by: null })
+      .eq('reviewed_by', userId)
+    if (
+      impactReviewerClearError &&
+      impactReviewerClearError.code !== '42P01' &&
+      impactReviewerClearError.code !== 'PGRST204'
+    ) {
+      throw impactReviewerClearError
+    }
+
+    const { error: queueReviewerClearError } = await adminClient
+      .from('impact_review_queue')
+      .update({ reviewed_by: null })
+      .eq('reviewed_by', userId)
+    if (
+      queueReviewerClearError &&
+      queueReviewerClearError.code !== '42P01' &&
+      queueReviewerClearError.code !== 'PGRST204'
+    ) {
+      throw queueReviewerClearError
+    }
+
     const { error: notesDeleteError } = await adminClient
       .from('user_notes')
       .delete()
@@ -71,14 +97,6 @@ serve(async (req) => {
       throw goalsDeleteError
     }
 
-    const { error: profileDeleteError } = await adminClient
-      .from('user_profiles')
-      .delete()
-      .eq('id', userId)
-    if (profileDeleteError) {
-      throw profileDeleteError
-    }
-
     // articles.author_id references auth.users without ON DELETE — clear before auth delete
     const { error: authorClearError } = await adminClient
       .from('articles')
@@ -86,6 +104,14 @@ serve(async (req) => {
       .eq('author_id', userId)
     if (authorClearError && authorClearError.code !== '42P01' && authorClearError.code !== 'PGRST204') {
       throw authorClearError
+    }
+
+    const { error: profileDeleteError } = await adminClient
+      .from('user_profiles')
+      .delete()
+      .eq('id', userId)
+    if (profileDeleteError) {
+      throw profileDeleteError
     }
 
     const { error: deleteError } = await adminClient.auth.admin.deleteUser(userId)

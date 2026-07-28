@@ -4,6 +4,25 @@ Use this when replying to rejection **Submission ID: 4cecb7f8-96bd-4617-a918-42c
 
 ---
 
+## Agent-completed (as of build-4 branch)
+
+Code + automated checks already done on `cursor/verify-appstore-fixes-431b`:
+
+- In-app auth (email first, Apple native, Google SFSafariViewController)
+- Bounded Home/profile loading (no infinite spinner)
+- Account deletion UI + hardened `delete-account` edge function source
+- iOS `CURRENT_PROJECT_VERSION = 4`
+- Unit tests (33) + `npm run build:prod` pass
+- Live probe: auth OK, Google+Apple enabled, published articles exist, `delete-account` deployed (401 without user JWT)
+
+Still broken/incomplete in production until you act:
+
+- `auto-publish-articles` currently returns **HTTP 500** on probe — set `AUTO_PUBLISH_SECRET` in Supabase Edge Function secrets and redeploy (timezone fix is in this branch)
+- Demo login not verified here — no `APP_REVIEW_EMAIL` / `APP_REVIEW_PASSWORD` in this environment
+- IPA archive / App Store Connect / physical iPhone QA require your Mac + Apple account
+
+---
+
 ## What we fixed in the new build
 
 ### Guideline 4 — Sign in inside the app
