@@ -76,7 +76,9 @@ export default function ArchiveView({
 
       setCategories(uniqueCategories);
     } catch (error) {
-      console.error('Error loading articles:', error);
+      if (import.meta.env.DEV) {
+        console.error('Error loading articles:', error);
+      }
       const message =
         error instanceof Error ? error.message : 'Failed to load archive stories.';
       setLoadError(message);

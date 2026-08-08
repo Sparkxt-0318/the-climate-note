@@ -20,6 +20,7 @@ import NoteCardGenerator from './NoteCardGenerator';
 import { publicAuthorInitial, publicAuthorName } from '../lib/publicProfile';
 import ReportNoteSheet from './ui/ReportNoteSheet';
 import { useRequestGuard } from '../lib/useRequestGuard';
+import { withTimeout } from '../lib/withTimeout';
 
 interface NotebookViewProps {
   userProfile: UserProfile | null;
@@ -72,6 +73,7 @@ function timeAgo(dateStr: string): string {
 export default function NotebookView({ userProfile, onWriteNote }: NotebookViewProps) {
   const [notes, setNotes] = useState<NoteWithReactions[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [popupNote, setPopupNote] = useState<PopupNote | null>(null);
   const [shareNote, setShareNote] = useState<(UserNote & { article_title?: string }) | null>(null);
   const [feedSearch, setFeedSearch] = useState('');
@@ -101,75 +103,87 @@ export default function NotebookView({ userProfile, onWriteNote }: NotebookViewP
   const loadNotes = useCallback(async () => {
     const generation = nextGeneration();
     setLoading(true);
+    setLoadError(null);
     try {
-      const { data: notesData, error: notesError } = await supabase
-        .from('user_notes')
-        .select(`
-          *,
-          articles!inner(title, published_date)
-        `)
-        .order('created_at', { ascending: false })
-        .limit(50);
+      await withTimeout(
+        (async () => {
+          const { data: notesData, error: notesError } = await supabase
+            .from('user_notes')
+            .select(`
+              *,
+              articles!inner(title, published_date)
+            `)
+            .order('created_at', { ascending: false })
+            .limit(50);
 
-      if (notesError) throw notesError;
+          if (notesError) throw notesError;
 
-      if (!notesData) {
-        if (isCurrent(generation)) setNotes([]);
-        return;
-      }
+          if (!notesData) {
+            if (isCurrent(generation)) setNotes([]);
+            return;
+          }
 
-      const authorIds = [...new Set(notesData.map((note) => note.user_id))];
-      const { data: authorProfiles } = await supabase
-        .from('community_profiles')
-        .select('id, display_name')
-        .in('id', authorIds);
+          const authorIds = [...new Set(notesData.map((note) => note.user_id))];
+          const { data: authorProfiles } = await supabase
+            .from('community_profiles')
+            .select('id, display_name')
+            .in('id', authorIds);
 
-      const profileById = new Map(
-        (authorProfiles ?? []).map((profile) => [profile.id, profile]),
+          const profileById = new Map(
+            (authorProfiles ?? []).map((profile) => [profile.id, profile]),
+          );
+
+          const noteIds = notesData.map((note) => note.id);
+          let reactionCounts: { note_id: string }[] = [];
+          let userReactions: { note_id: string }[] = [];
+
+          if (noteIds.length > 0) {
+            const { data: counts, error: countError } = await supabase
+              .from('note_reactions')
+              .select('note_id')
+              .in('note_id', noteIds);
+
+            if (countError) throw countError;
+            reactionCounts = counts || [];
+
+            if (userProfile) {
+              const { data: userReactionData, error: userReactionError } = await supabase
+                .from('note_reactions')
+                .select('note_id')
+                .in('note_id', noteIds)
+                .eq('user_id', userProfile.id);
+
+              if (userReactionError) throw userReactionError;
+              userReactions = userReactionData || [];
+            }
+          }
+
+          const notesWithReactions: NoteWithReactions[] = notesData.map((note) => ({
+            ...note,
+            user_profiles: profileById.get(note.user_id) ?? {
+              id: note.user_id,
+              display_name: null,
+            },
+            reaction_count: reactionCounts?.filter((r) => r.note_id === note.id).length || 0,
+            user_has_reacted: userReactions.some((r) => r.note_id === note.id),
+          }));
+
+          if (isCurrent(generation)) {
+            setNotes(notesWithReactions);
+          }
+        })(),
+        15_000,
+        'Loading community notes timed out. Please try again.',
       );
-
-      const noteIds = notesData.map((note) => note.id);
-      let reactionCounts: { note_id: string }[] = [];
-      let userReactions: { note_id: string }[] = [];
-
-      if (noteIds.length > 0) {
-        const { data: counts, error: countError } = await supabase
-          .from('note_reactions')
-          .select('note_id')
-          .in('note_id', noteIds);
-
-        if (countError) throw countError;
-        reactionCounts = counts || [];
-
-        if (userProfile) {
-          const { data: userReactionData, error: userReactionError } = await supabase
-            .from('note_reactions')
-            .select('note_id')
-            .in('note_id', noteIds)
-            .eq('user_id', userProfile.id);
-
-          if (userReactionError) throw userReactionError;
-          userReactions = userReactionData || [];
-        }
-      }
-
-      const notesWithReactions: NoteWithReactions[] = notesData.map((note) => ({
-        ...note,
-        user_profiles: profileById.get(note.user_id) ?? {
-          id: note.user_id,
-          display_name: null,
-        },
-        reaction_count: reactionCounts?.filter((r) => r.note_id === note.id).length || 0,
-        user_has_reacted: userReactions.some((r) => r.note_id === note.id),
-      }));
-
-      if (isCurrent(generation)) {
-        setNotes(notesWithReactions);
-      }
     } catch (error) {
-      console.error('Error loading notes:', error);
+      if (import.meta.env.DEV) {
+        console.error('Error loading notes:', error);
+      }
       if (isCurrent(generation)) {
-        showToast('Failed to load notes', 'error');
+        const message =
+          error instanceof Error ? error.message : 'Failed to load notes';
+        setLoadError(message);
+        showToast(message, 'error');
       }
     } finally {
       if (isCurrent(generation)) {
@@ -266,6 +280,21 @@ export default function NotebookView({ userProfile, onWriteNote }: NotebookViewP
     return (
       <div className="app-screen py-16 text-center">
         <div className="animate-pulse text-ink-muted text-sm font-medium">Loading community...</div>
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="app-screen py-16 text-center space-y-4">
+        <p className="text-sm text-ink-muted leading-relaxed px-6">{loadError}</p>
+        <button
+          type="button"
+          onClick={() => void loadNotes()}
+          className="px-6 py-3 rounded-2xl bg-forest text-cream font-semibold text-sm"
+        >
+          Retry
+        </button>
       </div>
     );
   }

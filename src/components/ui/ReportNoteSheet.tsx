@@ -16,8 +16,12 @@ export default function ReportNoteSheet({ noteId, excerpt, onClose }: ReportNote
   const handleSubmit = async () => {
     setSubmitting(true);
     try {
-      await openReportContent(noteId, excerpt, reason.trim() || undefined);
-      showToast('Report submitted. We review reports within 24–48 hours.', 'success');
+      const stored = await openReportContent(noteId, excerpt, reason.trim() || undefined);
+      if (stored) {
+        showToast('Report submitted. We review reports within 24–48 hours.', 'success');
+      } else {
+        showToast('Opening email to send your report…', 'info');
+      }
     } catch {
       showToast('Could not submit report. Please try again.', 'error');
     } finally {

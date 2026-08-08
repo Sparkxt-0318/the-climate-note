@@ -73,7 +73,6 @@ export default function PrivacyPolicy() {
               <a
                 href="https://policies.google.com/privacy"
                 className="text-emerald-600 underline"
-                target="_blank"
                 rel="noopener noreferrer"
               >
                 Google's Privacy Policy

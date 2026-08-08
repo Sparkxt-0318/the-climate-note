@@ -165,7 +165,9 @@ export default function ArticleView({ article, userProfile, onProfileUpdate, com
       setHasNoteToday(!!data && !error);
       if (data && !error) setSavedNote(data);
     } catch (error) {
-      console.error('Error checking today\'s note:', error);
+      if (import.meta.env.DEV) {
+        console.error('Error checking today\'s note:', error);
+      }
     }
   };
 
@@ -214,7 +216,9 @@ export default function ArticleView({ article, userProfile, onProfileUpdate, com
       }
       throw new Error('No suggestions returned');
     } catch (err) {
-      console.error('Failed to fetch suggestions:', err);
+      if (import.meta.env.DEV) {
+        console.error('Failed to fetch suggestions:', err);
+      }
       const message = err instanceof Error ? err.message : 'Failed to generate action suggestions';
       showToast(message, 'error');
       // Fallback: use insights or key takeaways
@@ -295,7 +299,11 @@ export default function ArticleView({ article, userProfile, onProfileUpdate, com
             note_id: noteData.id,
             note_content: noteData.content,
           },
-        }).catch(err => console.error('Impact classification failed (non-critical):', err));
+        }).catch(err => {
+          if (import.meta.env.DEV) {
+            console.error('Impact classification failed (non-critical):', err);
+          }
+        });
       }
 
       const updatedProfile = await refreshUserProfileStats(userProfile.id);

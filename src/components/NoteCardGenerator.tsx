@@ -394,7 +394,9 @@ export default function NoteCardGenerator({ note, userProfile, onClose }: NoteCa
       }
     } catch (err) {
       if ((err as Error).name !== 'AbortError') {
-        console.error('Share failed, downloading instead:', err);
+        if (import.meta.env.DEV) {
+          console.error('Share failed, downloading instead:', err);
+        }
         await handleDownload();
       }
     } finally {

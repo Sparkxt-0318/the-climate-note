@@ -94,7 +94,9 @@ export default function LeaderboardView({ userProfile }: LeaderboardViewProps) {
         setRankings(sorted);
       }
     } catch (err) {
-      console.error('Error loading rankings:', err);
+      if (import.meta.env.DEV) {
+        console.error('Error loading rankings:', err);
+      }
       if (isCurrent(generation)) {
         showToast('Failed to load leaderboard', 'error');
       }
@@ -158,7 +160,9 @@ export default function LeaderboardView({ userProfile }: LeaderboardViewProps) {
 
       setFeaturedNotes(result);
     } catch (err) {
-      console.error('Error loading featured notes:', err);
+      if (import.meta.env.DEV) {
+        console.error('Error loading featured notes:', err);
+      }
     }
   }, []);
 
@@ -171,7 +175,12 @@ export default function LeaderboardView({ userProfile }: LeaderboardViewProps) {
       .lte('created_at', end)
       .order('created_at', { ascending: false });
 
-    if (error) { console.error(error); return; }
+    if (error) {
+      if (import.meta.env.DEV) {
+        console.error(error);
+      }
+      return;
+    }
 
     const authorIds = [...new Set((data || []).map((n) => n.user_id))];
     const { data: profiles } = await supabase
@@ -249,7 +258,9 @@ export default function LeaderboardView({ userProfile }: LeaderboardViewProps) {
       await loadFeaturedNotes();
       showToast('Featured notes saved!', 'success');
     } catch (err) {
-      console.error('Error saving featured notes:', err);
+      if (import.meta.env.DEV) {
+        console.error('Error saving featured notes:', err);
+      }
       showToast('Failed to save featured notes', 'error');
     } finally {
       setSavingFeatures(false);

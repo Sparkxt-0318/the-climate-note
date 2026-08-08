@@ -83,7 +83,9 @@ export default function GoalsView({ userProfile }: GoalsViewProps) {
         p_user_id: userProfile.id,
       });
       if (refreshError && refreshError.code !== 'PGRST202') {
-        console.warn('refresh_user_goals RPC unavailable:', refreshError.message);
+        if (import.meta.env.DEV) {
+          console.warn('refresh_user_goals RPC unavailable:', refreshError.message);
+        }
       }
 
       const { data, error } = await supabase
@@ -99,7 +101,9 @@ export default function GoalsView({ userProfile }: GoalsViewProps) {
       const expired = (data || []).filter(g => g.status === 'pending_decision');
       if (expired.length > 0) setDecisionGoal({ goal: expired[0] });
     } catch (error) {
-      console.error('Error loading goals:', error);
+      if (import.meta.env.DEV) {
+        console.error('Error loading goals:', error);
+      }
       showToast('Failed to load goals', 'error');
     } finally {
       setLoading(false);
@@ -116,7 +120,9 @@ export default function GoalsView({ userProfile }: GoalsViewProps) {
       if (error) throw error;
       setTemplates(data || []);
     } catch (error) {
-      console.error('Error loading templates:', error);
+      if (import.meta.env.DEV) {
+        console.error('Error loading templates:', error);
+      }
     }
   };
 
