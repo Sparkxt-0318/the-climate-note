@@ -4,10 +4,10 @@ on:
   push:
     branches:
       - main
-      - claude/climate-note-platform-DR212
     paths:
       - 'supabase/functions/**'
       - 'supabase/migrations/**'
+      - '.github/workflows/deploy-supabase-functions.yml'
   workflow_dispatch:
 
 jobs:
@@ -15,69 +15,66 @@ jobs:
     runs-on: ubuntu-latest
     name: Deploy Edge Functions to Supabase
 
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      # Prefer secret; fall back to known production project ref (not sensitive)
+      SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
-      - name: Setup Deno
-        uses: denoland/setup-deno@v1
-        with:
-          deno-version: v1.x
 
       - name: Setup Supabase CLI
         uses: supabase/setup-cli@v1
         with:
           version: latest
 
-      - name: Link Supabase project
-        run: supabase link --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
-        env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      - name: Verify required secrets
+        run: |
+          if [ -z "$SUPABASE_ACCESS_TOKEN" ]; then
+            echo "::error::Missing GitHub Actions secret SUPABASE_ACCESS_TOKEN."
+            echo "Create a token at https://supabase.com/dashboard/account/tokens"
+            echo "then add it under Settings → Secrets and variables → Actions"
+            echo "(name must be SUPABASE_ACCESS_TOKEN — single underscore, not SUPABASE__ACCESS_TOKEN)."
+            exit 1
+          fi
+
+          if [ -z "$SUPABASE_PROJECT_REF" ]; then
+            echo "SUPABASE_PROJECT_REF secret not set; using production default."
+            echo "SUPABASE_PROJECT_REF=noefayakyrmmknqlcklf" >> "$GITHUB_ENV"
+          fi
+
+          echo "Project ref ready"
+          echo "Access token present"
 
       - name: Push database migrations
-        run: supabase db push
-        env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-
-      - name: Deploy generate-article-insights
         run: |
-          supabase functions deploy generate-article-insights \
-            --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
-        env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          if [ -z "$SUPABASE_DB_PASSWORD" ]; then
+            echo "::warning::SUPABASE_DB_PASSWORD not set — skipping supabase db push."
+            echo "Add the database password under Actions secrets to apply migrations from CI."
+            exit 0
+          fi
+          supabase link --project-ref "$SUPABASE_PROJECT_REF" --password "$SUPABASE_DB_PASSWORD" --yes
+          supabase db push --yes
 
-      - name: Deploy generate-action-suggestions
+      # Official CI pattern: deploy with --project-ref (no link required)
+      - name: Deploy edge functions
         run: |
-          supabase functions deploy generate-action-suggestions \
-            --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
-        env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-
-      - name: Deploy classify-note-impact
-        run: |
-          supabase functions deploy classify-note-impact \
-            --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
-        env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-
-      - name: Deploy auto-publish-articles
-        run: |
-          supabase functions deploy auto-publish-articles \
-            --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
-        env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-
-      - name: Deploy delete-account
-        run: |
-          supabase functions deploy delete-account \
-            --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
-        env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          for fn in \
+            generate-article-insights \
+            generate-action-suggestions \
+            classify-note-impact \
+            auto-publish-articles \
+            delete-account
+          do
+            echo "Deploying $fn..."
+            supabase functions deploy "$fn" --project-ref "$SUPABASE_PROJECT_REF"
+          done
 
       - name: Deployment Complete
         run: |
-          echo "✅ All Edge Functions deployed successfully!"
-          echo "Functions deployed:"
+          echo "Edge Functions deployed to $SUPABASE_PROJECT_REF:"
           echo "  - generate-article-insights"
           echo "  - generate-action-suggestions"
           echo "  - classify-note-impact"
